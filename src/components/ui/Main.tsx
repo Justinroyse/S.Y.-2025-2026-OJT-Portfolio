@@ -7,7 +7,7 @@ interface MainSectionProps {
 export default function MainSection({}: MainSectionProps) {
     return (
         <>
-        <div className="flex flex-col justify-start items-center text-brown-500 p-5 min-h-screen">
+        <div className="flex flex-col justify-center items-center text-brown-500 p-5 min-h-screen">
             <h1 className="text-3xl md:text-5xl">
                 <span className="font-bold">Welcome to</span> <br></br> my OJT Portfolio
             </h1>
