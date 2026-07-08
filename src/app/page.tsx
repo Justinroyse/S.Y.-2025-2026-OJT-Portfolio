@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import NavBar from "@/components/ui/NavBar";
 
 export default function Home() {
   return (
     <>
-    <h1>Home</h1>
+    <NavBar />
     </>
   );
 }
