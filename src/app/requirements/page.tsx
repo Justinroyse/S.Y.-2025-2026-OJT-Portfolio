@@ -11,7 +11,7 @@ const requirements = [
     { name: "Student Waiver", href: "#" },
     { name: "Internship Agreement", href: "#" },
     { name: "Consent Form", href: "#" },
-    { name: "Resume/CV", href: "#" },
+    { name: "Resume/CV", href: "https://drive.google.com/file/d/142oae1m7piToMcGhpXtuEpQEUnZPRrTq/view?usp=sharing" },
     { name: "Medical Certificate", href: "#" },
     { name: "Insurance", href: "#" },
     { name: "Weekly Report", href: "#" },
