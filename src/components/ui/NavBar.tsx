@@ -1,5 +1,5 @@
 import Link from "next/link";
-
+import Image from "next/image";
 interface NavBarProps {
     
 }
@@ -9,11 +9,25 @@ interface NavBarProps {
 export default function NavBar({  }: NavBarProps) {
     return (
         <>
-        <div className="flex flex-col justify-center md:flex-row gap-5 bg-slate-600 text-white p-5">
-            <Link href="/"><h1 className="text-3xl hover:underline cursor-pointer">Home</h1></Link>
-            <Link href="/about"><h1 className="text-3xl hover:underline cursor-pointer">About</h1></Link>
-            <Link href="/contact"><h1 className="text-3xl hover:underline cursor-pointer">Contact</h1></Link>
-            <Link href="/requirements"><h1 className="text-3xl hover:underline cursor-pointer">Requirements</h1></Link>
+        <div className="flex flex-row justify-start gap-133 bg-[#563B32] text-white p-5 ">
+            <Image src="/logo.svg" alt="logo icon" width={235} height={75} />
+            <div className="flex gap-x-22.5 justify-center">
+                <div className="place-content-center">
+                    <Link href="/">
+                        <Image src="/Home.svg" alt="Home Icon" width={35} height={35} />
+                    </Link>
+                </div>
+                <div className="place-content-center">
+                    <Link href="/contact">
+                        <Image src="/Bell.svg" alt="Contact Icon" width={35} height={35} />
+                    </Link>
+                </div>
+                <div className="place-content-center">
+                    <Link href="/requirements">
+                        <Image src="/Archive.svg" alt="Requirements Icon" width={35} height={35} />
+                    </Link>
+                </div>
+            </div>
         </div>
         </>
     );
