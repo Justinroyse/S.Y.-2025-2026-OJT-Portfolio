@@ -1,88 +1,88 @@
 [
   {
     "key": "approval_sheet",
-    "name": "Approval Sheet",
-    "href": "#"
+    "href": "#",
+    "name": "Approval Sheet"
   },
   {
     "key": "company_profile",
-    "name": "Company Profile",
-    "href": "#"
+    "href": "#",
+    "name": "Company Profile"
   },
   {
     "key": "moa",
-    "name": "Memorandum of Agreement",
-    "href": "#"
+    "href": "#",
+    "name": "Memorandum of Agreement"
   },
   {
     "key": "letter_intent",
-    "name": "Letter of Intent",
-    "href": "#"
+    "href": "#",
+    "name": "Letter of Intent"
   },
   {
     "key": "letter_endorsement",
-    "name": "Letter of Endorsement",
-    "href": "#"
+    "href": "#",
+    "name": "Letter of Endorsement"
   },
   {
     "key": "waiver",
-    "name": "Student Waiver",
-    "href": "#"
+    "href": "#",
+    "name": "Student Waiver"
   },
   {
     "key": "internship_agreement",
-    "name": "Internship Agreement",
-    "href": "#"
+    "href": "#",
+    "name": "Internship Agreement"
   },
   {
     "key": "consent_form",
-    "name": "Consent Form",
-    "href": "#"
+    "href": "#",
+    "name": "Consent Form"
   },
   {
     "key": "resume",
+    "href": "https://ricdvgwvgsemjvyanftq.supabase.co/storage/v1/object/public/uploads/resume.pdf",
     "name": "Resume / CV",
-    "href": "/uploads/resume.pdf",
-    "submissionDate": "Jul 15, 2026"
+    "submissionDate": "Jul 16, 2026"
   },
   {
     "key": "medical_cert",
-    "name": "Medical Certificate",
-    "href": "#"
+    "href": "#",
+    "name": "Medical Certificate"
   },
   {
     "key": "insurance",
-    "name": "Insurance",
-    "href": "#"
+    "href": "#",
+    "name": "Insurance"
   },
   {
     "key": "weekly_report",
-    "name": "Weekly Report",
-    "href": "#"
+    "href": "#",
+    "name": "Weekly Report"
   },
   {
     "key": "photo_doc",
-    "name": "Weekly Photo Documentation",
-    "href": "#"
+    "href": "#",
+    "name": "Weekly Photo Documentation"
   },
   {
     "key": "certificate_completion",
-    "name": "Certificate of Completion",
-    "href": "#"
+    "href": "#",
+    "name": "Certificate of Completion"
   },
   {
     "key": "eval_student",
-    "name": "Evaluation for Student Internship",
-    "href": "#"
+    "href": "#",
+    "name": "Evaluation for Student Internship"
   },
   {
     "key": "eval_supervisor",
-    "name": "Evaluation for Supervisor",
-    "href": "#"
+    "href": "#",
+    "name": "Evaluation for Supervisor"
   },
   {
     "key": "eval_hte",
-    "name": "Evaluation Instrument for HTE",
-    "href": "#"
+    "href": "#",
+    "name": "Evaluation Instrument for HTE"
   }
 ]
