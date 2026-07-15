@@ -1,19 +1,88 @@
 [
-  { "key": "approval_sheet", "name": "Approval Sheet", "href": "#" },
-  { "key": "company_profile", "name": "Company Profile", "href": "#" },
-  { "key": "moa", "name": "Memorandum of Agreement", "href": "#" },
-  { "key": "letter_intent", "name": "Letter of Intent", "href": "#" },
-  { "key": "letter_endorsement", "name": "Letter of Endorsement", "href": "#" },
-  { "key": "waiver", "name": "Student Waiver", "href": "#" },
-  { "key": "internship_agreement", "name": "Internship Agreement", "href": "#" },
-  { "key": "consent_form", "name": "Consent Form", "href": "#" },
-  { "key": "resume", "name": "Resume / CV", "href": "#" },
-  { "key": "medical_cert", "name": "Medical Certificate", "href": "#" },
-  { "key": "insurance", "name": "Insurance", "href": "#" },
-  { "key": "weekly_report", "name": "Weekly Report", "href": "#" },
-  { "key": "photo_doc", "name": "Weekly Photo Documentation", "href": "#" },
-  { "key": "certificate_completion", "name": "Certificate of Completion", "href": "#" },
-  { "key": "eval_student", "name": "Evaluation for Student Internship", "href": "#" },
-  { "key": "eval_supervisor", "name": "Evaluation for Supervisor", "href": "#" },
-  { "key": "eval_hte", "name": "Evaluation Instrument for HTE", "href": "#" }
+  {
+    "key": "approval_sheet",
+    "name": "Approval Sheet",
+    "href": "#"
+  },
+  {
+    "key": "company_profile",
+    "name": "Company Profile",
+    "href": "#"
+  },
+  {
+    "key": "moa",
+    "name": "Memorandum of Agreement",
+    "href": "#"
+  },
+  {
+    "key": "letter_intent",
+    "name": "Letter of Intent",
+    "href": "#"
+  },
+  {
+    "key": "letter_endorsement",
+    "name": "Letter of Endorsement",
+    "href": "#"
+  },
+  {
+    "key": "waiver",
+    "name": "Student Waiver",
+    "href": "#"
+  },
+  {
+    "key": "internship_agreement",
+    "name": "Internship Agreement",
+    "href": "#"
+  },
+  {
+    "key": "consent_form",
+    "name": "Consent Form",
+    "href": "#"
+  },
+  {
+    "key": "resume",
+    "name": "Resume / CV",
+    "href": "/uploads/resume.pdf",
+    "submissionDate": "Jul 15, 2026"
+  },
+  {
+    "key": "medical_cert",
+    "name": "Medical Certificate",
+    "href": "#"
+  },
+  {
+    "key": "insurance",
+    "name": "Insurance",
+    "href": "#"
+  },
+  {
+    "key": "weekly_report",
+    "name": "Weekly Report",
+    "href": "#"
+  },
+  {
+    "key": "photo_doc",
+    "name": "Weekly Photo Documentation",
+    "href": "#"
+  },
+  {
+    "key": "certificate_completion",
+    "name": "Certificate of Completion",
+    "href": "#"
+  },
+  {
+    "key": "eval_student",
+    "name": "Evaluation for Student Internship",
+    "href": "#"
+  },
+  {
+    "key": "eval_supervisor",
+    "name": "Evaluation for Supervisor",
+    "href": "#"
+  },
+  {
+    "key": "eval_hte",
+    "name": "Evaluation Instrument for HTE",
+    "href": "#"
+  }
 ]
