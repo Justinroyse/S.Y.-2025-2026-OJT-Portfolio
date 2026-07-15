@@ -41,6 +41,13 @@ interface RequirementItem {
   submissionDate?: string;
 }
 
+interface HTEData {
+  name: string;
+  designation: string;
+  details: string;
+  logoUrl: string;
+}
+
 export async function GET() {
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -50,7 +57,8 @@ export async function GET() {
     const about = await readData<AboutData>("about.json");
     const logs = await readData<LogEntry[]>("logs.json");
     const requirements = await readData<RequirementItem[]>("requirements.json");
-    return NextResponse.json({ about, logs, requirements });
+    const hte = await readData<HTEData>("hte.json");
+    return NextResponse.json({ about, logs, requirements, hte });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Failed to load databases" }, { status: 500 });
@@ -73,6 +81,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === "update-hte") {
+      const hteData = await readData<HTEData>("hte.json");
+      const updated = { ...hteData, ...payload };
+      await writeData("hte.json", updated);
+      return NextResponse.json({ success: true });
+    }
+
     if (action === "add-log") {
       const logs = await readData<LogEntry[]>("logs.json");
       const newLog: LogEntry = {
@@ -84,7 +99,6 @@ export async function POST(req: NextRequest) {
         tasks: payload.tasks || [],
       };
       logs.push(newLog);
-      // Sort logs (optional, e.g. by week title/id)
       await writeData("logs.json", logs);
       return NextResponse.json({ success: true, log: newLog });
     }
@@ -111,6 +125,12 @@ export async function POST(req: NextRequest) {
       const logs = await readData<LogEntry[]>("logs.json");
       const updated = logs.filter((l) => l.id !== payload.id);
       await writeData("logs.json", updated);
+      return NextResponse.json({ success: true });
+    }
+
+    // Support updating requirements list definition (rename, delete, add custom)
+    if (action === "update-requirements-list") {
+      await writeData("requirements.json", payload);
       return NextResponse.json({ success: true });
     }
 

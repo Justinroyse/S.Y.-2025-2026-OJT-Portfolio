@@ -13,9 +13,16 @@ interface LogEntry {
   hours: string;
 }
 
+interface HTEData {
+  name: string;
+  designation: string;
+  logoUrl: string;
+}
+
 export default async function Home() {
   const aboutData = await readData<AboutData>("about.json");
   const logs = await readData<LogEntry[]>("logs.json");
+  const hteData = await readData<HTEData>("hte.json");
 
   // Sum up hours from the log entries dynamically
   let totalHours = 0;
@@ -27,8 +34,8 @@ export default async function Home() {
   });
 
   const ojtStats = [
-    { label: "ESTABLISHMENT", value: "SOLOMON PAGE" },
-    { label: "DESIGNATION", value: "QA / TECHNICAL INTERN" },
+    { label: "ESTABLISHMENT", value: hteData.name },
+    { label: "DESIGNATION", value: hteData.designation },
     { label: "HOURS LOGGED", value: `${totalHours} / 240 HOURS` },
     { label: "TERM", value: `${aboutData.course}` },
   ];
@@ -49,7 +56,7 @@ export default async function Home() {
 
         {/* Right Crossed Box Logo Placeholder */}
         <div className="flex-shrink-0 flex justify-center">
-          <CrossedBox />
+          <CrossedBox logoUrl={hteData.logoUrl} />
         </div>
       </div>
 

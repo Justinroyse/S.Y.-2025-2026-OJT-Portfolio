@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import fs from "fs/promises";
 import path from "path";
 import { readData, writeData } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 async function isAuthenticated() {
   const cookieStore = await cookies();
@@ -15,6 +16,32 @@ interface RequirementItem {
   name: string;
   href: string;
   submissionDate?: string;
+}
+
+// Reusable helper to delete file from storage (Supabase or local FS)
+async function deleteFileFromStorage(currentUrl: string) {
+  if (!currentUrl || currentUrl === "#") return;
+
+  if (supabase && currentUrl.includes("supabase.co/storage")) {
+    const filename = currentUrl.split("/").pop();
+    if (filename) {
+      const { error: deleteError } = await supabase.storage
+        .from("uploads")
+        .remove([filename]);
+      
+      if (deleteError) {
+        console.warn("Failed to delete file from Supabase storage:", deleteError);
+      }
+    }
+  } else {
+    // Resolve local path
+    const filePath = path.join(process.cwd(), "public", currentUrl);
+    try {
+      await fs.unlink(filePath);
+    } catch {
+      console.warn("File was already deleted or not found: ", filePath);
+    }
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -31,42 +58,73 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing file or requirement key" }, { status: 400 });
     }
 
-    const requirements = await readData<RequirementItem[]>("requirements.json");
-    const itemIndex = requirements.findIndex((r) => r.key === reqKey);
+    const isRequirement = reqKey !== "hte_logo";
+    let requirements: RequirementItem[] = [];
+    let itemIndex = -1;
 
-    if (itemIndex === -1) {
-      return NextResponse.json({ error: "Requirement key not found" }, { status: 400 });
+    if (isRequirement) {
+      requirements = await readData<RequirementItem[]>("requirements.json");
+      itemIndex = requirements.findIndex((r) => r.key === reqKey);
+
+      if (itemIndex === -1) {
+        return NextResponse.json({ error: "Requirement key not found" }, { status: 400 });
+      }
     }
 
     // Convert file to Buffer
     const buffer = Buffer.from(await file.arrayBuffer());
+    let fileUrl = "";
 
-    // Configure paths
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await fs.mkdir(uploadDir, { recursive: true });
+    if (supabase) {
+      const ext = path.extname(file.name) || ".pdf";
+      const filename = `${reqKey}${ext}`;
 
-    const ext = path.extname(file.name) || ".pdf";
-    const filename = `${reqKey}${ext}`;
-    const filePath = path.join(uploadDir, filename);
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("uploads")
+        .upload(filename, buffer, {
+          contentType: file.type || "application/octet-stream",
+          upsert: true,
+        });
 
-    // Write file
-    await fs.writeFile(filePath, buffer);
+      if (uploadError) {
+        console.error("Supabase Storage upload error:", uploadError);
+        return NextResponse.json({ error: `Storage upload failed: ${uploadError.message}` }, { status: 500 });
+      }
 
-    // Update requirements db
-    const fileUrl = `/uploads/${filename}`;
-    const today = new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+      const { data: { publicUrl } } = supabase.storage
+        .from("uploads")
+        .getPublicUrl(filename);
 
-    requirements[itemIndex] = {
-      ...requirements[itemIndex],
-      href: fileUrl,
-      submissionDate: today,
-    };
+      fileUrl = publicUrl;
+    } else {
+      // Local fallback
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      await fs.mkdir(uploadDir, { recursive: true });
 
-    await writeData("requirements.json", requirements);
+      const ext = path.extname(file.name) || ".pdf";
+      const filename = `${reqKey}${ext}`;
+      const filePath = path.join(uploadDir, filename);
+
+      await fs.writeFile(filePath, buffer);
+      fileUrl = `/uploads/${filename}`;
+    }
+
+    if (isRequirement) {
+      // Update requirements db
+      const today = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+
+      requirements[itemIndex] = {
+        ...requirements[itemIndex],
+        href: fileUrl,
+        submissionDate: today,
+      };
+
+      await writeData("requirements.json", requirements);
+    }
 
     return NextResponse.json({ success: true, url: fileUrl });
   } catch (error) {
@@ -81,38 +139,39 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const { key } = await req.json();
+    const { key, url } = await req.json();
 
     if (!key) {
       return NextResponse.json({ error: "Missing key" }, { status: 400 });
     }
 
-    const requirements = await readData<RequirementItem[]>("requirements.json");
-    const idx = requirements.findIndex((r) => r.key === key);
+    const isRequirement = key !== "hte_logo";
 
-    if (idx === -1) {
-      return NextResponse.json({ error: "Requirement key not found" }, { status: 400 });
-    }
+    if (isRequirement) {
+      const requirements = await readData<RequirementItem[]>("requirements.json");
+      const idx = requirements.findIndex((r) => r.key === key);
 
-    const currentUrl = requirements[idx].href;
-    if (currentUrl && currentUrl !== "#") {
-      // Resolve path
-      const filePath = path.join(process.cwd(), "public", currentUrl);
-      try {
-        await fs.unlink(filePath);
-      } catch {
-        console.warn("File was already deleted or not found: ", filePath);
+      if (idx === -1) {
+        return NextResponse.json({ error: "Requirement key not found" }, { status: 400 });
+      }
+
+      const currentUrl = requirements[idx].href;
+      await deleteFileFromStorage(currentUrl);
+
+      // Reset database item
+      requirements[idx] = {
+        ...requirements[idx],
+        href: "#",
+        submissionDate: undefined,
+      };
+
+      await writeData("requirements.json", requirements);
+    } else {
+      // General file delete (e.g. HTE logo)
+      if (url) {
+        await deleteFileFromStorage(url);
       }
     }
-
-    // Reset database item
-    requirements[idx] = {
-      ...requirements[idx],
-      href: "#",
-      submissionDate: undefined,
-    };
-
-    await writeData("requirements.json", requirements);
 
     return NextResponse.json({ success: true });
   } catch (error) {
