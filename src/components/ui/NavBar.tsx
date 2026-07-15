@@ -1,34 +1,43 @@
+"use client";
+
 import Link from "next/link";
-import Image from "next/image";
-interface NavBarProps {
-    
-}
+import { usePathname } from "next/navigation";
 
-// Simple Navbar with Contact, About, and Requirements Buttons
+export default function NavBar() {
+  const pathname = usePathname();
 
-export default function NavBar({  }: NavBarProps) {
-    return (
-        <>
-        <div className="flex flex-row justify-start gap-133 bg-[#563B32] text-white p-5 ">
-            <Image src="/logo.svg" alt="logo icon" width={235} height={75} />
-            <div className="flex gap-x-22.5 justify-center">
-                <div className="place-content-center">
-                    <Link href="/">
-                        <Image src="/Home.svg" alt="Home Icon" width={35} height={35} />
-                    </Link>
-                </div>
-                <div className="place-content-center">
-                    <Link href="/contact">
-                        <Image src="/Bell.svg" alt="Contact Icon" width={35} height={35} />
-                    </Link>
-                </div>
-                <div className="place-content-center">
-                    <Link href="/requirements">
-                        <Image src="/Archive.svg" alt="Requirements Icon" width={35} height={35} />
-                    </Link>
-                </div>
-            </div>
-        </div>
-        </>
-    );
+  const navItems = [
+    { name: "HOME", path: "/" },
+    { name: "ABOUT", path: "/about" },
+    { name: "REQUIREMENTS", path: "/requirements" },
+    { name: "LOG", path: "/log" },
+  ];
+
+  // Helper to check active state
+  const isActive = (path: string) => {
+    if (path === "/") return pathname === "/";
+    return pathname.startsWith(path);
+  };
+
+  return (
+    <nav className="flex items-center gap-x-6 md:gap-x-10 text-[13px] md:text-[15px] font-normal tracking-[0.2em] font-orbitron select-none">
+      {navItems.map((item) => {
+        const active = isActive(item.path);
+        return (
+          <Link
+            key={item.path}
+            href={item.path}
+            className={`relative py-1.5 transition-all duration-300 uppercase cursor-pointer ${
+              active ? "text-white font-bold" : "text-neutral-400 hover:text-neutral-200"
+            }`}
+          >
+            <span>{item.name}</span>
+            {active && (
+              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)] animate-in fade-in duration-300" />
+            )}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }
