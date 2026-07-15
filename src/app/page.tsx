@@ -1,21 +1,45 @@
+import { readData } from "@/lib/db";
 import CrossedBox from "@/components/ui/CrossedBox";
 
-export default function Home() {
-  // OJT high-level stats for dashboard aesthetic
+export const dynamic = "force-dynamic";
+
+interface AboutData {
+  name: string;
+  course: string;
+  studentId: string;
+}
+
+interface LogEntry {
+  hours: string;
+}
+
+export default async function Home() {
+  const aboutData = await readData<AboutData>("about.json");
+  const logs = await readData<LogEntry[]>("logs.json");
+
+  // Sum up hours from the log entries dynamically
+  let totalHours = 0;
+  logs.forEach((log) => {
+    const match = log.hours.match(/(\d+)/);
+    if (match) {
+      totalHours += parseInt(match[0], 10);
+    }
+  });
+
   const ojtStats = [
     { label: "ESTABLISHMENT", value: "SOLOMON PAGE" },
     { label: "DESIGNATION", value: "QA / TECHNICAL INTERN" },
-    { label: "HOURS LOGGED", value: "240 / 240 HOURS" },
-    { label: "TERM", value: "S.Y. 2025 - 2026" },
+    { label: "HOURS LOGGED", value: `${totalHours} / 240 HOURS` },
+    { label: "TERM", value: `${aboutData.course}` },
   ];
 
   return (
-    <div className="flex flex-col gap-16 w-full">
+    <div className="flex flex-col gap-16 w-full animate-in fade-in duration-300">
       {/* Hero Section */}
       <div className="flex flex-col lg:flex-row items-center justify-between gap-12 w-full">
         {/* Left Intro Text */}
         <div className="flex-1 max-w-xl text-center lg:text-left">
-          <p className="text-[16px] md:text-[20px] font-normal leading-relaxed text-white font-orbitron tracking-wide">
+          <p className="text-[16px] md:text-[20px] font-normal leading-relaxed text-white font-orbitron tracking-wide uppercase">
             OJT PORTFOLIO DOCUMENTING MY EXPERIENCES, JOURNEY AND DELIVERABLES FOR{" "}
             <span className="underline decoration-white/60 underline-offset-8 decoration-1 font-bold">
               OJT 1 COURSE SUBJECT

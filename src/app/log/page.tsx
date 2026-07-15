@@ -1,75 +1,20 @@
 import React from "react";
+import { readData } from "@/lib/db";
 
-const logEntries = [
-  {
-    week: "WEEK 01",
-    dates: "JUNE 01 - JUNE 05, 2026",
-    hours: "40 HOURS",
-    status: "APPROVED",
-    tasks: [
-      "HTE onboarding and development environment configuration.",
-      "Repository setup and library dependency audits for the Next.js portfolio project.",
-      "Participated in initial design syncs and Figma layout reviews."
-    ]
-  },
-  {
-    week: "WEEK 02",
-    dates: "JUNE 08 - JUNE 12, 2026",
-    hours: "40 HOURS",
-    status: "APPROVED",
-    tasks: [
-      "Constructed reusable layout grids and structural routing wrappers.",
-      "Implemented global typography loading for Orbitron and Geist Sans.",
-      "Developed interactive page selector components matching design mockups."
-    ]
-  },
-  {
-    week: "WEEK 03",
-    dates: "JUNE 15 - JUNE 19, 2026",
-    hours: "40 HOURS",
-    status: "APPROVED",
-    tasks: [
-      "Built interactive UI placeholder components and SVG graphics.",
-      "Reviewed color palettes and adjusted custom Tailwind v4 configurations.",
-      "Created technical responsive grids for list and detail items."
-    ]
-  },
-  {
-    week: "WEEK 04",
-    dates: "JUNE 22 - JUNE 26, 2026",
-    hours: "40 HOURS",
-    status: "APPROVED",
-    tasks: [
-      "Migrated legacy contact details into biographical portfolios.",
-      "Wrote structured specifications for OJT requirements checklist.",
-      "Identified and debugged routing state errors in sidebar navigations."
-    ]
-  },
-  {
-    week: "WEEK 05",
-    dates: "JUNE 29 - JULY 03, 2026",
-    hours: "40 HOURS",
-    status: "APPROVED",
-    tasks: [
-      "Configured automated build tests and resolved TypeScript warnings.",
-      "Audited mobile navigation menus for responsive alignment.",
-      "Prepared weekly report drafts and uploaded photo documentation."
-    ]
-  },
-  {
-    week: "WEEK 06",
-    dates: "JULY 06 - JULY 10, 2026",
-    hours: "40 HOURS",
-    status: "APPROVED",
-    tasks: [
-      "Finalized stylesheet styling rules and scrollbar visual tweaks.",
-      "Conducted complete design validation audits against Figma guidelines.",
-      "Successfully built the production-ready Next.js artifact bundle."
-    ]
-  }
-];
+export const dynamic = "force-dynamic";
 
-export default function Log() {
+interface LogEntry {
+  id: string;
+  week: string;
+  dates: string;
+  hours: string;
+  status: string;
+  tasks: string[];
+}
+
+export default async function Log() {
+  const logEntries = await readData<LogEntry[]>("logs.json");
+
   return (
     <div className="flex flex-col gap-8 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
       
@@ -79,7 +24,7 @@ export default function Log() {
           ACTIVITY_LOG
         </h2>
         <span className="text-[10px] font-mono text-neutral-500 tracking-wider">
-          TOTAL: 240 HOURS
+          TIMELINE VIEW
         </span>
       </div>
 
@@ -87,7 +32,7 @@ export default function Log() {
       <div className="flex flex-col gap-6 max-h-[400px] overflow-y-auto pr-2">
         {logEntries.map((entry, idx) => (
           <div 
-            key={idx} 
+            key={entry.id || idx} 
             className="border border-white/10 bg-neutral-900/10 p-5 flex flex-col gap-3 font-orbitron hover:border-white/20 transition-colors duration-200"
           >
             {/* Top Row: Week, Dates, Status */}

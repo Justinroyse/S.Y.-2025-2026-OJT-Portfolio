@@ -1,18 +1,26 @@
 import Link from "next/link";
+import { readData } from "@/lib/db";
 
-export default function About() {
-  const contactInfo = [
-    { label: "EMAIL", value: "justinroyselsolomon@gmail.com", href: "mailto:justinroyselsolomon@gmail.com" },
-    { label: "PHONE", value: "09082022037", href: "tel:09082022037" },
-    { label: "GITHUB", value: "github.com/Justinroyse", href: "https://github.com/Justinroyse" },
-    { label: "LINKEDIN", value: "linkedin.com/in/justin-solomon", href: "https://www.linkedin.com/in/justin-royse-solomon" },
-    { label: "FACEBOOK", value: "facebook.com/JustinRoyse.Solomon", href: "https://www.facebook.com/JustinRoyse.Solomon" },
-  ];
+export const dynamic = "force-dynamic";
 
-  const skillSet = [
-    "Software Engineering", "React / Next.js", "Tailwind CSS", 
-    "TypeScript", "Git / GitHub", "QA Testing", "Systems Development"
-  ];
+interface ContactItem {
+  label: string;
+  value: string;
+  href: string;
+}
+
+interface AboutData {
+  name: string;
+  course: string;
+  studentId: string;
+  biography: string;
+  objective: string;
+  contactInfo: ContactItem[];
+  skillSet: string[];
+}
+
+export default async function About() {
+  const data = await readData<AboutData>("about.json");
 
   return (
     <div className="flex flex-col gap-10 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -33,9 +41,7 @@ export default function About() {
               {"// BIOGRAPHY"}
             </h3>
             <p className="text-[14px] text-neutral-300 leading-relaxed font-normal tracking-wide normal-case">
-              I am a Computer Engineering student at the Polytechnic University of the Philippines. 
-              Currently completing my OJT 1 internship course, I focus on systems development, technical quality assurance, 
-              and crafting digital interfaces that emphasize both visual layout consistency and robust architectural structure.
+              {data.biography}
             </p>
           </div>
 
@@ -45,8 +51,7 @@ export default function About() {
               {"// INTERNSHIP OBJECTIVES"}
             </h3>
             <p className="text-[14px] text-neutral-300 leading-relaxed font-normal tracking-wide normal-case">
-              To apply academic engineering principles to real-world development teams, gain familiarity with professional technical environments, 
-              and deliver documentation, codebases, and systems that reflect academic and corporate standards.
+              {data.objective}
             </p>
           </div>
         </div>
@@ -60,7 +65,7 @@ export default function About() {
               {"// CONTACT"}
             </h3>
             <div className="border border-white/10 bg-neutral-900/10 p-6 flex flex-col gap-4 font-orbitron">
-              {contactInfo.map((contact, idx) => (
+              {data.contactInfo.map((contact, idx) => (
                 <div 
                   key={idx} 
                   className="flex flex-col md:flex-row md:justify-between md:items-center border-b border-white/5 pb-2 last:border-b-0 last:pb-0 gap-1"
@@ -86,7 +91,7 @@ export default function About() {
               {"// COMPETENCIES"}
             </h3>
             <div className="flex flex-wrap gap-2">
-              {skillSet.map((skill, idx) => (
+              {data.skillSet.map((skill, idx) => (
                 <span
                   key={idx}
                   className="px-3 py-1.5 border border-white/10 bg-neutral-900/20 text-[11px] font-orbitron text-neutral-300 tracking-wider uppercase rounded-none hover:border-white/30 hover:bg-neutral-800/30 transition-all duration-200 select-none"
