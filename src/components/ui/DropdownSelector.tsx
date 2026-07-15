@@ -22,6 +22,7 @@ export default function DropdownSelector() {
     if (pathname.startsWith("/about")) return options[1];
     if (pathname.startsWith("/requirements")) return options[2];
     if (pathname.startsWith("/log")) return options[3];
+    if (pathname.startsWith("/admin")) return { name: "ADMIN", path: "/admin" };
     return options[0];
   };
 

@@ -1,0 +1,43 @@
+{
+  "name": "Justin Royse L. Solomon",
+  "course": "BSCpE 2-6",
+  "studentId": "2024-02548-mn-0",
+  "biography": "I am a Computer Engineering student at the Polytechnic University of the Philippines. Currently completing my OJT 1 internship course, I focus on systems development, technical quality assurance, and crafting digital interfaces that emphasize both visual layout consistency and robust architectural structure.",
+  "objective": "To apply academic engineering principles to real-world development teams, gain familiarity with professional technical environments, and deliver documentation, codebases, and systems that reflect academic and corporate standards.",
+  "contactInfo": [
+    {
+      "label": "EMAIL",
+      "value": "justinroyselsolomon@gmail.com",
+      "href": "mailto:justinroyselsolomon@gmail.com"
+    },
+    {
+      "label": "PHONE",
+      "value": "09082022037",
+      "href": "tel:09082022037"
+    },
+    {
+      "label": "GITHUB",
+      "value": "github.com/Justinroyse",
+      "href": "https://github.com/Justinroyse"
+    },
+    {
+      "label": "LINKEDIN",
+      "value": "linkedin.com/in/justin-solomon",
+      "href": "https://www.linkedin.com/in/justin-royse-solomon"
+    },
+    {
+      "label": "FACEBOOK",
+      "value": "facebook.com/JustinRoyse.Solomon",
+      "href": "https://www.facebook.com/JustinRoyse.Solomon"
+    }
+  ],
+  "skillSet": [
+    "Software Engineering",
+    "React / Next.js",
+    "Tailwind CSS",
+    "TypeScript",
+    "Git / GitHub",
+    "QA Testing",
+    "Systems Development"
+  ]
+}
