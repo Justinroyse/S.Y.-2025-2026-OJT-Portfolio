@@ -18,6 +18,32 @@ interface RequirementItem {
   submissionDate?: string;
 }
 
+// Reusable helper to delete file from storage (Supabase or local FS)
+async function deleteFileFromStorage(currentUrl: string) {
+  if (!currentUrl || currentUrl === "#") return;
+
+  if (supabase && currentUrl.includes("supabase.co/storage")) {
+    const filename = currentUrl.split("/").pop();
+    if (filename) {
+      const { error: deleteError } = await supabase.storage
+        .from("uploads")
+        .remove([filename]);
+      
+      if (deleteError) {
+        console.warn("Failed to delete file from Supabase storage:", deleteError);
+      }
+    }
+  } else {
+    // Resolve local path
+    const filePath = path.join(process.cwd(), "public", currentUrl);
+    try {
+      await fs.unlink(filePath);
+    } catch {
+      console.warn("File was already deleted or not found: ", filePath);
+    }
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,11 +58,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing file or requirement key" }, { status: 400 });
     }
 
-    const requirements = await readData<RequirementItem[]>("requirements.json");
-    const itemIndex = requirements.findIndex((r) => r.key === reqKey);
+    const isRequirement = reqKey !== "hte_logo";
+    let requirements: RequirementItem[] = [];
+    let itemIndex = -1;
 
-    if (itemIndex === -1) {
-      return NextResponse.json({ error: "Requirement key not found" }, { status: 400 });
+    if (isRequirement) {
+      requirements = await readData<RequirementItem[]>("requirements.json");
+      itemIndex = requirements.findIndex((r) => r.key === reqKey);
+
+      if (itemIndex === -1) {
+        return NextResponse.json({ error: "Requirement key not found" }, { status: 400 });
+      }
     }
 
     // Convert file to Buffer
@@ -50,7 +82,7 @@ export async function POST(req: NextRequest) {
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("uploads")
         .upload(filename, buffer, {
-          contentType: file.type || "application/pdf",
+          contentType: file.type || "application/octet-stream",
           upsert: true,
         });
 
@@ -77,20 +109,22 @@ export async function POST(req: NextRequest) {
       fileUrl = `/uploads/${filename}`;
     }
 
-    // Update requirements db
-    const today = new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    if (isRequirement) {
+      // Update requirements db
+      const today = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
 
-    requirements[itemIndex] = {
-      ...requirements[itemIndex],
-      href: fileUrl,
-      submissionDate: today,
-    };
+      requirements[itemIndex] = {
+        ...requirements[itemIndex],
+        href: fileUrl,
+        submissionDate: today,
+      };
 
-    await writeData("requirements.json", requirements);
+      await writeData("requirements.json", requirements);
+    }
 
     return NextResponse.json({ success: true, url: fileUrl });
   } catch (error) {
@@ -105,52 +139,39 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const { key } = await req.json();
+    const { key, url } = await req.json();
 
     if (!key) {
       return NextResponse.json({ error: "Missing key" }, { status: 400 });
     }
 
-    const requirements = await readData<RequirementItem[]>("requirements.json");
-    const idx = requirements.findIndex((r) => r.key === key);
+    const isRequirement = key !== "hte_logo";
 
-    if (idx === -1) {
-      return NextResponse.json({ error: "Requirement key not found" }, { status: 400 });
-    }
+    if (isRequirement) {
+      const requirements = await readData<RequirementItem[]>("requirements.json");
+      const idx = requirements.findIndex((r) => r.key === key);
 
-    const currentUrl = requirements[idx].href;
-    if (currentUrl && currentUrl !== "#") {
-      if (supabase && currentUrl.includes("supabase.co/storage")) {
-        // Resolve filename from public URL (e.g. filename is the last segment)
-        const filename = currentUrl.split("/").pop();
-        if (filename) {
-          const { error: deleteError } = await supabase.storage
-            .from("uploads")
-            .remove([filename]);
-          
-          if (deleteError) {
-            console.warn("Failed to delete file from Supabase storage:", deleteError);
-          }
-        }
-      } else {
-        // Resolve local path
-        const filePath = path.join(process.cwd(), "public", currentUrl);
-        try {
-          await fs.unlink(filePath);
-        } catch {
-          console.warn("File was already deleted or not found: ", filePath);
-        }
+      if (idx === -1) {
+        return NextResponse.json({ error: "Requirement key not found" }, { status: 400 });
+      }
+
+      const currentUrl = requirements[idx].href;
+      await deleteFileFromStorage(currentUrl);
+
+      // Reset database item
+      requirements[idx] = {
+        ...requirements[idx],
+        href: "#",
+        submissionDate: undefined,
+      };
+
+      await writeData("requirements.json", requirements);
+    } else {
+      // General file delete (e.g. HTE logo)
+      if (url) {
+        await deleteFileFromStorage(url);
       }
     }
-
-    // Reset database item
-    requirements[idx] = {
-      ...requirements[idx],
-      href: "#",
-      submissionDate: undefined,
-    };
-
-    await writeData("requirements.json", requirements);
 
     return NextResponse.json({ success: true });
   } catch (error) {

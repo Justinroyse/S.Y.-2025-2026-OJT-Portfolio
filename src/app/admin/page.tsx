@@ -35,6 +35,13 @@ interface RequirementItem {
   submissionDate?: string;
 }
 
+interface HTEData {
+  name: string;
+  designation: string;
+  details: string;
+  logoUrl: string;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   
@@ -45,8 +52,9 @@ export default function AdminDashboard() {
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
   // CMS state
-  const [activeTab, setActiveTab] = useState<"profile" | "logs" | "uploads">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "hte" | "logs" | "uploads">("profile");
   const [aboutData, setAboutData] = useState<AboutData | null>(null);
+  const [hteData, setHteData] = useState<HTEData | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [requirements, setRequirements] = useState<RequirementItem[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -55,6 +63,16 @@ export default function AdminDashboard() {
   // Edit states for Weekly Logs
   const [editingLog, setEditingLog] = useState<Partial<LogEntry> | null>(null);
   const [newTaskInput, setNewTaskInput] = useState("");
+
+  // CRUD states for Requirements list definitions
+  const [newReqName, setNewReqName] = useState("");
+  const [newReqKey, setNewReqKey] = useState("");
+  const [showAddReqForm, setShowAddReqForm] = useState(false);
+  const [editingReqKey, setEditingReqKey] = useState<string | null>(null);
+  const [editingReqName, setEditingReqName] = useState("");
+
+  // In-site File Preview modal state
+  const [activePreviewUrl, setActivePreviewUrl] = useState<string | null>(null);
 
   // Fetch CMS Data
   async function fetchCMSData() {
@@ -66,6 +84,7 @@ export default function AdminDashboard() {
         setAboutData(data.about);
         setLogs(data.logs);
         setRequirements(data.requirements);
+        setHteData(data.hte);
       } else {
         showStatus("Failed to load CMS databases", "error");
       }
@@ -135,6 +154,7 @@ export default function AdminDashboard() {
       await fetch("/api/auth", { method: "DELETE" });
       setIsAuthenticated(false);
       setAboutData(null);
+      setHteData(null);
       setLogs([]);
       setRequirements([]);
       router.push("/");
@@ -165,6 +185,74 @@ export default function AdminDashboard() {
       }
     } catch {
       showStatus("Server error during save", "error");
+    }
+  }
+
+  // Save HTE/Company Details
+  async function handleSaveHte(e: React.FormEvent) {
+    e.preventDefault();
+    if (!hteData) return;
+
+    try {
+      const res = await fetch("/api/cms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update-hte",
+          payload: hteData,
+        }),
+      });
+
+      if (res.ok) {
+        showStatus("HTE Profile updated successfully!");
+      } else {
+        showStatus("Failed to update HTE Profile", "error");
+      }
+    } catch {
+      showStatus("Server error during HTE save", "error");
+    }
+  }
+
+  // Handle HTE Logo Upload
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("key", "hte_logo");
+
+    showStatus("Uploading HTE Seal/Logo...");
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (hteData) {
+          const updatedHte = { ...hteData, logoUrl: data.url };
+          setHteData(updatedHte);
+          
+          // Auto-save the logo url to database
+          await fetch("/api/cms", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "update-hte",
+              payload: updatedHte,
+            }),
+          });
+        }
+        showStatus("HTE Seal uploaded and saved successfully!");
+      } else {
+        const err = await res.json();
+        showStatus(err.error || "Seal upload failed", "error");
+      }
+    } catch {
+      showStatus("Server connection error during upload", "error");
     }
   }
 
@@ -295,6 +383,119 @@ export default function AdminDashboard() {
     }
   }
 
+  // Add Custom Requirement definition
+  async function handleAddRequirement(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newReqName.trim() || !newReqKey.trim()) return;
+
+    const key = newReqKey.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_");
+    if (requirements.some((r) => r.key === key)) {
+      showStatus("Requirement key already exists", "error");
+      return;
+    }
+
+    const updated = [
+      ...requirements,
+      { key, name: newReqName.trim(), href: "#" },
+    ];
+
+    try {
+      const res = await fetch("/api/cms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update-requirements-list",
+          payload: updated,
+        }),
+      });
+
+      if (res.ok) {
+        showStatus("New requirement definition added!");
+        setNewReqName("");
+        setNewReqKey("");
+        setShowAddReqForm(false);
+        fetchCMSData();
+      } else {
+        showStatus("Failed to add requirement", "error");
+      }
+    } catch {
+      showStatus("Server error while adding requirement", "error");
+    }
+  }
+
+  // Delete Requirement definition (along with file)
+  async function handleDeleteRequirementDefinition(key: string) {
+    if (!confirm("Are you sure you want to delete this requirement definition? This will also delete any uploaded document attachment associated with it.")) return;
+
+    // Delete uploaded file if present
+    const item = requirements.find((r) => r.key === key);
+    if (item && item.href && item.href !== "#") {
+      try {
+        await fetch("/api/upload", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key }),
+        });
+      } catch (err) {
+        console.warn("Could not delete file attachment during definition removal: ", err);
+      }
+    }
+
+    const updated = requirements.filter((r) => r.key !== key);
+
+    try {
+      const res = await fetch("/api/cms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update-requirements-list",
+          payload: updated,
+        }),
+      });
+
+      if (res.ok) {
+        showStatus("Requirement definition deleted!");
+        fetchCMSData();
+      } else {
+        showStatus("Failed to delete definition", "error");
+      }
+    } catch {
+      showStatus("Server error while deleting definition", "error");
+    }
+  }
+
+  // Rename Requirement
+  async function handleRenameRequirement(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingReqName.trim() || !editingReqKey) return;
+
+    const updated = requirements.map((r) =>
+      r.key === editingReqKey ? { ...r, name: editingReqName.trim() } : r
+    );
+
+    try {
+      const res = await fetch("/api/cms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update-requirements-list",
+          payload: updated,
+        }),
+      });
+
+      if (res.ok) {
+        showStatus("Requirement renamed successfully!");
+        setEditingReqKey(null);
+        setEditingReqName("");
+        fetchCMSData();
+      } else {
+        showStatus("Failed to rename requirement", "error");
+      }
+    } catch {
+      showStatus("Server error while renaming requirement", "error");
+    }
+  }
+
   // Render Loader
   if (isAuthenticated === null) {
     return (
@@ -356,7 +557,7 @@ export default function AdminDashboard() {
             ADMIN_CONSOLE
           </h2>
           <span className="text-[9px] font-mono text-neutral-500 tracking-wider">
-            SESSION: ACTIVE (HOST: LOCAL)
+            SESSION: ACTIVE (HOST: CLOUD/HYBRID)
           </span>
         </div>
         <button
@@ -382,6 +583,7 @@ export default function AdminDashboard() {
       <div className="flex border-b border-white/15 gap-2 select-none overflow-x-auto pb-1">
         {([
           { id: "profile", label: "ABOUT PROFILE" },
+          { id: "hte", label: "HTE PROFILE" },
           { id: "logs", label: "OJT WEEKLY LOGS" },
           { id: "uploads", label: "DOCUMENT UPLOADS" }
         ] as const).map((tab) => (
@@ -408,7 +610,7 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <>
-            {/* 1. PROFILE EDITOR TAB */}
+            {/* 1. ABOUT PROFILE EDITOR TAB */}
             {activeTab === "profile" && aboutData && (
               <form onSubmit={handleSaveProfile} className="flex flex-col gap-6 max-h-[500px] overflow-y-auto pr-2 font-orbitron">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -522,6 +724,115 @@ export default function AdminDashboard() {
                     className="h-[36px] px-8 bg-[#d9d9d9] hover:bg-white text-[#252525] font-bold text-xs tracking-widest uppercase cursor-pointer transition-all active:scale-[0.98]"
                   >
                     SAVE_PROFILE_DETAILS
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* HTE PROFILE EDITOR TAB */}
+            {activeTab === "hte" && hteData && (
+              <form onSubmit={handleSaveHte} className="flex flex-col gap-6 max-h-[500px] overflow-y-auto pr-2 font-orbitron">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] text-neutral-500 tracking-wider">HTE ESTABLISHMENT NAME</label>
+                    <input
+                      type="text"
+                      value={hteData.name}
+                      onChange={(e) => setHteData({ ...hteData, name: e.target.value })}
+                      className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] text-neutral-500 tracking-wider">INTERNSHIP DESIGNATION</label>
+                    <input
+                      type="text"
+                      value={hteData.designation}
+                      onChange={(e) => setHteData({ ...hteData, designation: e.target.value })}
+                      className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-neutral-500 tracking-wider">COMPANY DETAILS / DESCRIPTION</label>
+                  <textarea
+                    rows={6}
+                    value={hteData.details}
+                    onChange={(e) => setHteData({ ...hteData, details: e.target.value })}
+                    className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20 font-sans"
+                    required
+                  />
+                </div>
+
+                {/* Logo upload block */}
+                <div className="flex flex-col gap-3">
+                  <label className="text-[10px] text-neutral-500 tracking-wider">HTE LOGO / SEAL</label>
+                  <div className="border border-white/5 bg-neutral-900/10 p-4 flex flex-col sm:flex-row items-center gap-6">
+                    {/* Logo display */}
+                    <div className="w-[100px] h-[100px] border border-white/15 bg-neutral-950 flex items-center justify-center relative overflow-hidden select-none">
+                      {hteData.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={hteData.logoUrl} alt="Logo preview" className="max-w-[90%] max-h-[90%] object-contain" />
+                      ) : (
+                        <span className="text-[9px] text-neutral-600 font-mono">[NO_SEAL]</span>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col gap-3">
+                      <label className="px-4 py-2 border border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 text-xs tracking-wider uppercase cursor-pointer transition-colors text-center">
+                        UPLOAD NEW LOGO
+                        <input 
+                          type="file"
+                          accept=".png,.jpg,.jpeg,.svg,.webp"
+                          onChange={handleLogoUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      {hteData.logoUrl && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!confirm("Remove logo?")) return;
+                            try {
+                              await fetch("/api/upload", {
+                                method: "DELETE",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ key: "hte_logo", url: hteData.logoUrl })
+                              });
+                              const updatedHte = { ...hteData, logoUrl: "" };
+                              setHteData(updatedHte);
+                              
+                              // Save database details
+                              await fetch("/api/cms", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  action: "update-hte",
+                                  payload: updatedHte,
+                                }),
+                              });
+                              showStatus("HTE Logo removed.");
+                            } catch {
+                              showStatus("Failed to remove logo", "error");
+                            }
+                          }}
+                          className="px-4 py-2 border border-rose-500/20 hover:bg-rose-500/10 text-rose-400 text-xs tracking-wider uppercase cursor-pointer"
+                        >
+                          REMOVE LOGO
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    className="h-[36px] px-8 bg-[#d9d9d9] hover:bg-white text-[#252525] font-bold text-xs tracking-widest uppercase cursor-pointer transition-all active:scale-[0.98]"
+                  >
+                    SAVE_HTE_DETAILS
                   </button>
                 </div>
               </form>
@@ -712,12 +1023,87 @@ export default function AdminDashboard() {
             {/* 3. UPLOADS TAB */}
             {activeTab === "uploads" && (
               <div className="flex flex-col gap-6">
-                <div className="border-b border-white/5 pb-2">
+                <div className="flex justify-between items-center border-b border-white/5 pb-2">
                   <span className="text-[11px] font-mono text-neutral-500 tracking-wider">
                     UPLOAD CENTER: ATTACH OJT DOCUMENTS (PDF / IMAGES)
                   </span>
+                  
+                  <button
+                    onClick={() => setShowAddReqForm(true)}
+                    className="px-3 py-1 border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 font-bold font-orbitron tracking-widest text-[9px] uppercase cursor-pointer"
+                  >
+                    + ADD REQUIREMENT
+                  </button>
                 </div>
 
+                {/* Add requirement definition form */}
+                {showAddReqForm && (
+                  <form onSubmit={handleAddRequirement} className="border border-emerald-500/10 bg-emerald-500/5 p-4 flex flex-col gap-3 font-orbitron animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex justify-between items-center border-b border-emerald-500/10 pb-1">
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase">ADD NEW OJT REQUIREMENT DEFINITION</span>
+                      <button type="button" onClick={() => setShowAddReqForm(false)} className="text-[9px] text-neutral-400 hover:text-white uppercase">[CANCEL]</button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] text-neutral-500">REQUIREMENT NAME (E.G. "OFFICIAL RECEIPT")</label>
+                        <input
+                          type="text"
+                          value={newReqName}
+                          onChange={(e) => {
+                            setNewReqName(e.target.value);
+                            if (!newReqKey) {
+                              setNewReqKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_"));
+                            }
+                          }}
+                          placeholder="Document Name"
+                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-1.5 text-xs focus:outline-none"
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] text-neutral-500">SYSTEM KEY (E.G. "official_receipt")</label>
+                        <input
+                          type="text"
+                          value={newReqKey}
+                          onChange={(e) => setNewReqKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
+                          placeholder="sys_key"
+                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-1.5 text-xs focus:outline-none"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <button type="submit" className="h-[28px] self-start px-4 bg-emerald-400 text-[#252525] font-bold text-[10px] tracking-wider uppercase cursor-pointer">
+                      SAVE_DEFINITION
+                    </button>
+                  </form>
+                )}
+
+                {/* Edit Name / Rename Form */}
+                {editingReqKey && (
+                  <form onSubmit={handleRenameRequirement} className="border border-white/15 bg-neutral-900/40 p-4 flex flex-col gap-3 font-orbitron animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex justify-between items-center border-b border-white/10 pb-1">
+                      <span className="text-[10px] font-bold text-white uppercase">RENAME REQUIREMENT</span>
+                      <button type="button" onClick={() => { setEditingReqKey(null); setEditingReqName(""); }} className="text-[9px] text-neutral-400 hover:text-white uppercase">[CANCEL]</button>
+                    </div>
+                    <div className="flex gap-3 items-end">
+                      <div className="flex-grow flex flex-col gap-1">
+                        <label className="text-[9px] text-neutral-500 font-mono">EDITING NAME FOR KEY: "{editingReqKey}"</label>
+                        <input
+                          type="text"
+                          value={editingReqName}
+                          onChange={(e) => setEditingReqName(e.target.value)}
+                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-1.5 text-xs focus:outline-none"
+                          required
+                        />
+                      </div>
+                      <button type="submit" className="h-[32px] px-4 bg-[#d9d9d9] hover:bg-white text-[#252525] font-bold text-[10px] tracking-wider uppercase cursor-pointer">
+                        RENAME_FILE
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Requirements list */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 select-none font-orbitron">
                   {requirements.map((req) => {
                     const isUploaded = req.href && req.href !== "#";
@@ -735,36 +1121,50 @@ export default function AdminDashboard() {
                             }`}>
                               {req.name}
                             </span>
-                            {req.submissionDate && (
-                              <span className="text-[9px] font-mono text-neutral-500 mt-0.5 lowercase">
-                                uploaded: {req.submissionDate}
-                              </span>
-                            )}
+                            <span className="text-[9px] font-mono text-neutral-500 mt-0.5 lowercase">
+                              key: {req.key} {req.submissionDate ? `• uploaded: ${req.submissionDate}` : ""}
+                            </span>
                           </div>
-                          <span className={`text-[9px] font-mono px-1.5 py-0.5 border ${
-                            isUploaded 
-                              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" 
-                              : "border-amber-500/20 bg-amber-500/10 text-amber-400"
-                          }`}>
-                            {isUploaded ? "ACTIVE" : "MISSING"}
-                          </span>
+                          
+                          <div className="flex items-center gap-2 select-none">
+                            <button
+                              onClick={() => { setEditingReqKey(req.key); setEditingReqName(req.name); }}
+                              className="text-[9px] text-neutral-500 hover:text-white uppercase transition-colors"
+                              title="Rename requirement"
+                            >
+                              [RENAME]
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRequirementDefinition(req.key)}
+                              className="text-[9px] text-rose-500/60 hover:text-rose-400 uppercase transition-colors"
+                              title="Delete requirement definition"
+                            >
+                              [DELETE]
+                            </button>
+                            <span className={`text-[9px] font-mono px-1.5 py-0.5 border ${
+                              isUploaded 
+                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" 
+                                : "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                            }`}>
+                              {isUploaded ? "ACTIVE" : "MISSING"}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Upload action controls */}
                         <div className="flex items-center gap-3 border-t border-white/5 pt-3">
                           {isUploaded ? (
                             <>
-                              <a 
-                                href={req.href}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-3 py-1 border border-white/10 hover:bg-white/5 text-neutral-300 hover:text-white text-[10px] tracking-wider uppercase cursor-pointer"
+                              <button 
+                                type="button"
+                                onClick={() => setActivePreviewUrl(req.href)}
+                                className="px-3 py-1 border border-white/10 hover:bg-white/5 text-neutral-300 hover:text-white text-[10px] tracking-wider uppercase cursor-pointer transition-colors"
                               >
                                 VIEW_FILE
-                              </a>
+                              </button>
                               <button
                                 onClick={() => handleDeleteFile(req.key)}
-                                className="px-3 py-1 border border-rose-500/25 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 text-[10px] tracking-wider uppercase cursor-pointer"
+                                className="px-3 py-1 border border-rose-500/25 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 text-[10px] tracking-wider uppercase cursor-pointer transition-colors"
                               >
                                 REMOVE
                               </button>
@@ -790,6 +1190,73 @@ export default function AdminDashboard() {
           </>
         )}
       </div>
+
+      {/* Embedded Document Viewer Modal */}
+      {activePreviewUrl && (
+        <div className="fixed inset-0 z-50 bg-[#151515]/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 font-orbitron">
+          <div className="w-full max-w-5xl h-[85vh] border border-white/20 bg-[#1e1e1e] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center border-b border-white/10 px-6 py-4 bg-neutral-900/40">
+              <div className="flex flex-col">
+                <span className="text-[9px] text-neutral-500 font-mono tracking-widest uppercase">
+                  SYS_PREVIEW_UTILITY
+                </span>
+                <span className="text-[13px] font-bold tracking-wider text-white truncate max-w-[200px] sm:max-w-lg">
+                  {activePreviewUrl.split("/").pop()}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href={activePreviewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 border border-white/15 hover:bg-white/5 text-neutral-300 hover:text-white text-[10px] tracking-widest uppercase transition-colors"
+                >
+                  NEW_TAB
+                </a>
+                <button
+                  onClick={() => setActivePreviewUrl(null)}
+                  className="px-3 py-1.5 border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 text-[10px] tracking-widest uppercase cursor-pointer transition-colors"
+                >
+                  CLOSE [X]
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body / Embedded File */}
+            <div className="flex-grow bg-neutral-950/70 p-2 sm:p-4 flex items-center justify-center overflow-hidden">
+              {activePreviewUrl.includes(".pdf") ? (
+                <iframe
+                  src={activePreviewUrl}
+                  className="w-full h-full border-0"
+                  title="PDF Document Viewer"
+                />
+              ) : /\.(jpg|jpeg|png|webp|gif|svg)/i.test(activePreviewUrl) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={activePreviewUrl}
+                  alt="Requirement Document"
+                  className="max-w-full max-h-full object-contain select-none shadow-2xl"
+                />
+              ) : (
+                <div className="text-center p-6 flex flex-col gap-4 max-w-md">
+                  <div className="text-rose-500 font-mono text-lg">[!] NO_PREVIEW_AVAILABLE</div>
+                  <p className="text-xs text-neutral-400 leading-relaxed font-sans">
+                    This file format does not support inline rendering. Use the button above to open or download the file.
+                  </p>
+                  <a
+                    href={activePreviewUrl}
+                    download
+                    className="self-center px-6 py-2 bg-[#d9d9d9] hover:bg-white text-[#252525] font-bold text-xs tracking-widest uppercase transition-all"
+                  >
+                    DOWNLOAD_FILE
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
     </div>
   );
