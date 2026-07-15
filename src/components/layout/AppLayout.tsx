@@ -3,8 +3,6 @@
 import React from "react";
 import DropdownSelector from "../ui/DropdownSelector";
 import NavBar from "../ui/NavBar";
-import Link from "next/link";
-import Image from "next/image";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -26,8 +24,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <DropdownSelector />
         </div>
         
-        {/* Cell 3: Top Navigation Bar */}
-        <div className="border-b border-white/15 flex items-center justify-between px-12 bg-[#252525]/50 backdrop-blur-sm">
+        {/* Cell 3: Top Header Area (NavBar) */}
+        <div className="border-b border-white/15 flex items-center px-12 bg-[#252525]/50 backdrop-blur-sm">
           <NavBar />
         </div>
 
@@ -59,16 +57,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* Cell 7: Bottom-Left Margin Spacer */}
         <div className="border-r border-white/15 bg-neutral-900/20" />
         
-        {/* Cell 8: University & Dept Seals */}
-        <div className="border-r border-white/15 flex items-center justify-center p-8 bg-neutral-900/10">
-          <Image
-            src="/seals.png"
-            alt="PUP, CoE, CpE Seals"
-            width={235}
-            height={75}
-            className="h-[75px] w-auto object-contain opacity-75 hover:opacity-100 transition-opacity duration-300 filter drop-shadow-[0_0_10px_rgba(255,255,255,0.05)]"
-          />
-        </div>
+        {/* Cell 8: Bottom-Left Sidebar (Spacer) */}
+        <div className="border-r border-white/15 bg-neutral-900/10" />
         
         {/* Cell 9: Footer Info */}
         <div className="p-12 flex justify-between items-center text-[11px] font-mono text-neutral-500 uppercase tracking-widest bg-[#252525]/40">
@@ -81,38 +71,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Mobile/Tablet Layout (Under lg) */}
       <div className="flex lg:hidden flex-col flex-grow">
         {/* Top Header */}
-        <header className="border-b border-white/15 bg-[#1e1e1e]/90 backdrop-blur-md p-4 flex flex-col gap-3 sticky top-0 z-40">
-          <div className="flex justify-between items-center">
-            <Link href="/" className="text-[13px] font-bold tracking-widest uppercase hover:opacity-80">
-              JRLS PORTFOLIO
-            </Link>
-            {/* Quick Page Selector */}
+        <header className="border-b border-white/15 bg-[#1e1e1e]/90 backdrop-blur-md p-4 flex flex-col sm:flex-row justify-between items-center gap-4 sticky top-0 z-40">
+          <div className="w-full sm:w-auto flex justify-center sm:justify-end">
             <DropdownSelector />
           </div>
-
-          {/* Nav Links inline scroll */}
-          <div className="flex gap-5 overflow-x-auto pb-1 text-[11px] font-bold tracking-wider uppercase border-t border-white/5 pt-2 scrollbar-none">
-            <Link href="/" className="hover:text-neutral-300 whitespace-nowrap">HOME</Link>
-            <Link href="/about" className="hover:text-neutral-300 whitespace-nowrap">ABOUT</Link>
-            <Link href="/requirements" className="hover:text-neutral-300 whitespace-nowrap">REQUIREMENTS</Link>
-            <Link href="/log" className="hover:text-neutral-300 whitespace-nowrap">LOG</Link>
-          </div>
+          <NavBar />
         </header>
 
         {/* Profile Card Banner */}
-        <section className="bg-neutral-900/40 border-b border-white/15 px-6 py-4 flex flex-row justify-between items-center gap-4">
+        <section className="bg-neutral-900/40 border-b border-white/15 px-6 py-4">
           <div className="uppercase tracking-wider">
             <h2 className="text-[15px] font-bold text-white leading-tight">Justin Royse L. Solomon</h2>
             <div className="text-[11px] text-neutral-400 mt-1">BSCpE 2-6 | 2024-02548-mn-0</div>
-          </div>
-          <div>
-            <Image
-              src="/seals.png"
-              alt="Seals"
-              width={141}
-              height={45}
-              className="h-[45px] w-auto object-contain opacity-70"
-            />
           </div>
         </section>
 

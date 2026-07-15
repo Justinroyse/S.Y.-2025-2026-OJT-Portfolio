@@ -57,7 +57,7 @@ export default function About() {
           {/* Contact Details Card */}
           <div className="flex flex-col gap-3">
             <h3 className="text-[11px] text-neutral-500 font-mono tracking-[0.25em] uppercase font-bold font-orbitron">
-              {"// SECURE_COMMUNICATIONS"}
+              {"// CONTACT"}
             </h3>
             <div className="border border-white/10 bg-neutral-900/10 p-6 flex flex-col gap-4 font-orbitron">
               {contactInfo.map((contact, idx) => (

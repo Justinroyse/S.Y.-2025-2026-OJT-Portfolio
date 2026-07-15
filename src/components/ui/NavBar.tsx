@@ -13,30 +13,27 @@ export default function NavBar() {
     { name: "LOG", path: "/log" },
   ];
 
-  // Determine active route
+  // Helper to check active state
   const isActive = (path: string) => {
     if (path === "/") return pathname === "/";
     return pathname.startsWith(path);
   };
 
   return (
-    <nav className="flex items-center gap-x-12 text-[16px] font-normal tracking-[0.2em] font-orbitron select-none">
+    <nav className="flex items-center gap-x-6 md:gap-x-10 text-[13px] md:text-[15px] font-normal tracking-[0.2em] font-orbitron select-none">
       {navItems.map((item) => {
         const active = isActive(item.path);
         return (
           <Link
             key={item.path}
             href={item.path}
-            className={`relative py-2 transition-all duration-300 uppercase cursor-pointer ${
-              active
-                ? "text-white font-bold"
-                : "text-neutral-400 hover:text-neutral-200"
+            className={`relative py-1.5 transition-all duration-300 uppercase cursor-pointer ${
+              active ? "text-white font-bold" : "text-neutral-400 hover:text-neutral-200"
             }`}
           >
             <span>{item.name}</span>
-            {/* Cyberpunk active underline indicator */}
             {active && (
-              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] animate-in fade-in zoom-in-50 duration-300" />
+              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)] animate-in fade-in duration-300" />
             )}
           </Link>
         );
