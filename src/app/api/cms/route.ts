@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "edit-log") {
       const logs = await readData<LogEntry[]>("logs.json");
-      const idx = logs.findIndex((l) => l.id === payload.id);
+      const idx = logs.findIndex((l) => String(l.id) === String(payload.id));
       if (idx === -1) {
         return NextResponse.json({ error: "Log entry not found" }, { status: 404 });
       }
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "delete-log") {
       const logs = await readData<LogEntry[]>("logs.json");
-      const updated = logs.filter((l) => l.id !== payload.id);
+      const updated = logs.filter((l) => String(l.id) !== String(payload.id));
       await writeData("logs.json", updated);
       return NextResponse.json({ success: true });
     }
