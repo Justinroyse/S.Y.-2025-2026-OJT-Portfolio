@@ -36,7 +36,7 @@ export default async function Home() {
   const ojtStats = [
     { label: "ESTABLISHMENT", value: hteData.name },
     { label: "DESIGNATION", value: hteData.designation },
-    { label: "HOURS LOGGED", value: `${totalHours} / 240 HOURS` },
+    { label: "HOURS LOGGED", value: `${totalHours} / 300 HOURS` },
     { label: "TERM", value: `${aboutData.course}` },
   ];
 

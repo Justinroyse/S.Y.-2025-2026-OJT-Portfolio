@@ -38,13 +38,13 @@ export default function CrossedBox({ logoUrl }: CrossedBoxProps) {
         200_X_200
       </div>
 
-      <div className="w-full h-full p-2 flex items-center justify-center z-10">
+      <div className="w-full h-full flex items-center justify-center z-10">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={logoUrl}
             alt="HTE Logo"
-            className="max-w-[85%] max-h-[85%] object-contain select-none transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-full object-cover select-none transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="text-center p-4 transition-opacity duration-300 opacity-60 group-hover:opacity-100">
