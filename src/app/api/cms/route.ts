@@ -59,9 +59,9 @@ export async function GET() {
     const requirements = await readData<RequirementItem[]>("requirements.json");
     const hte = await readData<HTEData>("hte.json");
     return NextResponse.json({ about, logs, requirements, hte });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return NextResponse.json({ error: "Failed to load databases" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Failed to load databases" }, { status: 500 });
   }
 }
 
@@ -135,8 +135,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return NextResponse.json({ error: "Operation failed" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Operation failed" }, { status: 500 });
   }
 }

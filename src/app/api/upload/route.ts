@@ -127,9 +127,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, url: fileUrl });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return NextResponse.json({ error: "Upload processing failed" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Upload processing failed" }, { status: 500 });
   }
 }
 
@@ -174,8 +174,8 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return NextResponse.json({ error: "File deletion failed" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "File deletion failed" }, { status: 500 });
   }
 }

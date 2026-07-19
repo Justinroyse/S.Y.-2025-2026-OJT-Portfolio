@@ -44,6 +44,12 @@ export async function readData<T>(fileName: string): Promise<T> {
 }
 
 export async function writeData<T>(fileName: string, data: T): Promise<void> {
+  if (!supabase && process.env.VERCEL === "1") {
+    throw new Error(
+      "Supabase database is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in your Vercel project environment variables."
+    );
+  }
+
   if (supabase) {
     try {
       const { error } = await supabase
@@ -62,13 +68,13 @@ export async function writeData<T>(fileName: string, data: T): Promise<void> {
         }
         return;
       }
-      console.error("Supabase write failed, falling back to local FS:", error);
-    } catch (e) {
-      console.error("Failed to write to Supabase, falling back to local FS:", e);
+      throw new Error(`Supabase write failed: ${error.message} (${error.code || ""})`);
+    } catch (e: any) {
+      throw new Error(e?.message || "Failed to write to Supabase");
     }
   }
 
-  // Fallback / standard local write
+  // Fallback / standard local write (only reaches here during local development when supabase is not set)
   const filePath = path.join(DATA_DIR, fileName);
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");

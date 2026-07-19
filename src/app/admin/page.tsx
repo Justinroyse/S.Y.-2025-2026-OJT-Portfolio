@@ -178,10 +178,11 @@ export default function AdminDashboard() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showStatus("Profile details updated successfully!");
       } else {
-        showStatus("Failed to update profile", "error");
+        showStatus(data.error || "Failed to update profile", "error");
       }
     } catch {
       showStatus("Server error during save", "error");
@@ -203,10 +204,11 @@ export default function AdminDashboard() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showStatus("HTE Profile updated successfully!");
       } else {
-        showStatus("Failed to update HTE Profile", "error");
+        showStatus(data.error || "Failed to update HTE Profile", "error");
       }
     } catch {
       showStatus("Server error during HTE save", "error");
@@ -295,12 +297,13 @@ export default function AdminDashboard() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showStatus(isNew ? "Added new OJT log entry!" : "Log entry updated!");
         setEditingLog(null);
         fetchCMSData();
       } else {
-        showStatus("Failed to save log entry", "error");
+        showStatus(data.error || "Failed to save log entry", "error");
       }
     } catch {
       showStatus("Server error while saving log", "error");
@@ -321,11 +324,12 @@ export default function AdminDashboard() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showStatus("Log entry deleted successfully!");
         fetchCMSData();
       } else {
-        showStatus("Failed to delete log entry", "error");
+        showStatus(data.error || "Failed to delete log entry", "error");
       }
     } catch {
       showStatus("Server error during deletion", "error");
