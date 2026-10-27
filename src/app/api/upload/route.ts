@@ -40,6 +40,16 @@ interface AboutData {
   skillSet: string[];
 }
 
+interface LogEntry {
+  id: string;
+  week: string;
+  dates: string;
+  hours: string;
+  status: string;
+  tasks: string[];
+  images?: string[];
+}
+
 /**
  * Helper to delete a file from GitHub repository and local disk.
  */
@@ -101,6 +111,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const reqKey = formData.get("key") as string | null;
+    const logId = formData.get("logId") as string | null;
 
     if (!file || !reqKey) {
       return NextResponse.json(
@@ -111,7 +122,8 @@ export async function POST(req: NextRequest) {
 
     const isHteLogo = reqKey === "hte_logo";
     const isProfilePhoto = reqKey === "profile_photo";
-    const isRequirement = !isHteLogo && !isProfilePhoto;
+    const isLogImage = reqKey.startsWith("log_image");
+    const isRequirement = !isHteLogo && !isProfilePhoto && !isLogImage;
     let requirements: RequirementItem[] = [];
     let itemIndex = -1;
 
@@ -130,7 +142,8 @@ export async function POST(req: NextRequest) {
     // Convert file to Buffer
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = path.extname(file.name) || (isRequirement ? ".pdf" : ".png");
-    const filename = `${reqKey}${ext}`;
+    const sanitizedKey = reqKey.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filename = `${sanitizedKey}${ext}`;
     const repoPath = `public/uploads/${filename}`;
     const fileUrl = `/api/view/${filename}`;
 
@@ -177,6 +190,16 @@ export async function POST(req: NextRequest) {
       const about = await readData<AboutData>("about.json");
       about.avatarUrl = fileUrl;
       await writeData("about.json", about);
+    } else if (isLogImage && logId) {
+      const logs = await readData<LogEntry[]>("logs.json");
+      const logIdx = logs.findIndex((l) => String(l.id) === String(logId));
+      if (logIdx !== -1) {
+        const currentImages = logs[logIdx].images || [];
+        if (!currentImages.includes(fileUrl)) {
+          logs[logIdx].images = [...currentImages, fileUrl];
+          await writeData("logs.json", logs);
+        }
+      }
     }
 
     return NextResponse.json({ success: true, url: fileUrl });
@@ -194,7 +217,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const { key, url } = await req.json();
+    const { key, url, logId } = await req.json();
 
     if (!key) {
       return NextResponse.json({ error: "Missing key" }, { status: 400 });
@@ -202,7 +225,8 @@ export async function DELETE(req: NextRequest) {
 
     const isHteLogo = key === "hte_logo";
     const isProfilePhoto = key === "profile_photo";
-    const isRequirement = !isHteLogo && !isProfilePhoto;
+    const isLogImage = key === "log_image" || String(key).startsWith("log_image");
+    const isRequirement = !isHteLogo && !isProfilePhoto && !isLogImage;
 
     if (isRequirement) {
       const requirements =
@@ -242,6 +266,18 @@ export async function DELETE(req: NextRequest) {
       }
       about.avatarUrl = "";
       await writeData("about.json", about);
+    } else if (isLogImage) {
+      if (url) {
+        await deleteFileFromStorage(url, key);
+      }
+      if (logId && url) {
+        const logs = await readData<LogEntry[]>("logs.json");
+        const logIdx = logs.findIndex((l) => String(l.id) === String(logId));
+        if (logIdx !== -1 && logs[logIdx].images) {
+          logs[logIdx].images = logs[logIdx].images!.filter((img) => img !== url);
+          await writeData("logs.json", logs);
+        }
+      }
     }
 
     return NextResponse.json({ success: true });

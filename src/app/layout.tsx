@@ -25,7 +25,7 @@ const orbitron = Orbitron({
 export const metadata: Metadata = {
   title: "Justin Solomon — OJT Portfolio | BSCpE 2-6",
   description:
-    "On-the-Job Training (OJT 1) Academic & Engineering Dossier of Justin Royse L. Solomon, BS Computer Engineering 2-6, Polytechnic University of the Philippines (SY 2025–2026).",
+    "On-the-Job Training (OJT 1) Portfolio of Justin Royse L. Solomon, BS Computer Engineering 2-6, Polytechnic University of the Philippines (SY 2025–2026).",
 };
 
 export const viewport: Viewport = {

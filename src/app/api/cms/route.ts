@@ -33,6 +33,7 @@ interface LogEntry {
   hours: string;
   status: string;
   tasks: string[];
+  images?: string[];
 }
 
 interface RequirementItem {
@@ -103,6 +104,7 @@ export async function POST(req: NextRequest) {
         hours: payload.hours || "40 HOURS",
         status: payload.status || "APPROVED",
         tasks: payload.tasks || [],
+        images: payload.images || [],
       };
       logs.push(newLog);
       await writeData("logs.json", logs);
@@ -125,6 +127,8 @@ export async function POST(req: NextRequest) {
         hours: payload.hours,
         status: payload.status,
         tasks: payload.tasks,
+        images:
+          payload.images !== undefined ? payload.images : logs[idx].images || [],
       };
       await writeData("logs.json", logs);
       return NextResponse.json({ success: true });

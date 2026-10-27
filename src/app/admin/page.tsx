@@ -27,6 +27,7 @@ interface LogEntry {
   hours: string;
   status: string;
   tasks: string[];
+  images?: string[];
 }
 
 interface RequirementItem {
@@ -69,6 +70,7 @@ export default function AdminDashboard() {
   // Edit states for Weekly Logs
   const [editingLog, setEditingLog] = useState<Partial<LogEntry> | null>(null);
   const [newTaskInput, setNewTaskInput] = useState("");
+  const [isUploadingLogImages, setIsUploadingLogImages] = useState(false);
 
   // CRUD states for Requirements list definitions
   const [newReqName, setNewReqName] = useState("");
@@ -342,6 +344,112 @@ export default function AdminDashboard() {
     if (!editingLog?.tasks) return;
     const newTasks = editingLog.tasks.filter((_, i) => i !== index);
     setEditingLog({ ...editingLog, tasks: newTasks });
+  }
+
+  // Upload Weekly Log Photo(s) inside Edit/Add Form or directly on a Log Card
+  async function handleLogImagesUpload(
+    e: React.ChangeEvent<HTMLInputElement>,
+    targetLog?: LogEntry
+  ) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const logId = targetLog?.id || editingLog?.id || "";
+    setIsUploadingLogImages(true);
+    showStatus(`Uploading ${files.length} photo(s)...`);
+
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uniqueKey = `log_image_${logId || "draft"}_${Date.now()}_${i}`;
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("key", uniqueKey);
+        if (logId) {
+          formData.append("logId", String(logId));
+        }
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.url) {
+            uploadedUrls.push(data.url);
+          }
+        } else {
+          const err = await res.json().catch(() => ({}));
+          showStatus(err.error || "Failed to upload log photo.", "error");
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        if (targetLog) {
+          showStatus("Weekly log photo(s) uploaded.");
+          fetchCMSData();
+          router.refresh();
+        } else if (editingLog) {
+          setEditingLog((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  images: [...(prev.images || []), ...uploadedUrls],
+                }
+              : prev
+          );
+          showStatus("Photo(s) attached to weekly log.");
+          if (logId) {
+            fetchCMSData();
+            router.refresh();
+          }
+        }
+      }
+    } catch {
+      showStatus("Network error while uploading weekly log photo.", "error");
+    } finally {
+      setIsUploadingLogImages(false);
+      e.target.value = "";
+    }
+  }
+
+  // Remove Weekly Log Photo
+  async function handleRemoveLogImage(imageUrl: string, logId?: string) {
+    if (!confirm("Remove this photo from the weekly log?")) return;
+
+    try {
+      await fetch("/api/upload", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: "log_image",
+          url: imageUrl,
+          logId: logId || editingLog?.id,
+        }),
+      });
+
+      if (editingLog) {
+        setEditingLog((prev) =>
+          prev
+            ? {
+                ...prev,
+                images: (prev.images || []).filter((img) => img !== imageUrl),
+              }
+            : prev
+        );
+      }
+
+      showStatus("Photo removed from weekly log.");
+      if (logId || editingLog?.id) {
+        fetchCMSData();
+        router.refresh();
+      }
+    } catch {
+      showStatus("Could not remove photo.", "error");
+    }
   }
 
   // Save Log (Edit or Add)
@@ -1298,6 +1406,84 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
+                    {/* Weekly Photo Documentation Upload & Gallery Editor */}
+                    <div className="flex flex-col gap-3 border-t border-white/10 pt-4">
+                      <div className="flex flex-wrap justify-between items-center gap-2">
+                        <div className="flex flex-col">
+                          <label className="text-[10px] font-mono text-neutral-300 tracking-wider uppercase">
+                            Weekly Photo Documentation (
+                            {editingLog.images?.length || 0})
+                          </label>
+                          <span className="text-[11px] text-neutral-400 font-sans">
+                            Upload photos documenting your tasks for this week.
+                          </span>
+                        </div>
+                        <label
+                          className={`min-h-[38px] px-4 py-1.5 border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-mono tracking-wider uppercase cursor-pointer transition-colors inline-flex items-center ${
+                            isUploadingLogImages
+                              ? "opacity-50 pointer-events-none"
+                              : ""
+                          }`}
+                        >
+                          {isUploadingLogImages
+                            ? "Uploading..."
+                            : "+ Upload Photos"}
+                          <input
+                            type="file"
+                            accept=".png,.jpg,.jpeg,.webp"
+                            multiple
+                            onChange={(e) => handleLogImagesUpload(e)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {editingLog.images && editingLog.images.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
+                          {editingLog.images.map((imgUrl, imgIdx) => (
+                            <div
+                              key={`${imgUrl}-${imgIdx}`}
+                              className="border border-white/15 bg-[#121314] p-2 flex flex-col gap-2"
+                            >
+                              <div
+                                onClick={() => setActivePreviewUrl(imgUrl)}
+                                className="aspect-video w-full bg-[#18191b] overflow-hidden cursor-pointer relative group"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={imgUrl}
+                                  alt={`Week photo ${imgIdx + 1}`}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                              </div>
+                              <div className="flex items-center justify-between gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setActivePreviewUrl(imgUrl)}
+                                  className="text-[10px] font-mono text-neutral-300 hover:text-white uppercase cursor-pointer"
+                                >
+                                  Preview
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleRemoveLogImage(imgUrl, editingLog.id)
+                                  }
+                                  className="text-[10px] font-mono text-rose-400 hover:text-rose-300 uppercase cursor-pointer"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="border border-dashed border-white/15 bg-[#121314]/40 p-4 text-center text-xs text-neutral-500 font-mono">
+                          No photos attached for this week yet.
+                        </div>
+                      )}
+                    </div>
+
                     <div className="pt-2 flex flex-wrap gap-3">
                       <button
                         type="submit"
@@ -1329,6 +1515,7 @@ export default function AdminDashboard() {
                             hours: "40 HOURS",
                             status: "APPROVED",
                             tasks: [],
+                            images: [],
                           })
                         }
                         className="min-h-[40px] px-4 py-2 border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold font-orbitron tracking-widest text-[11px] uppercase cursor-pointer transition-colors"
@@ -1338,43 +1525,93 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="flex flex-col gap-3.5">
-                      {logs.map((entry) => (
-                        <div
-                          key={entry.id}
-                          className="border border-white/15 bg-[#1b1c1e]/60 p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-                        >
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex flex-wrap items-center gap-2.5">
-                              <span className="text-[14px] font-orbitron font-bold text-white tracking-wider">
-                                {entry.week}
-                              </span>
-                              <span className="text-[11px] text-neutral-400 font-mono">
-                                [{entry.dates}]
-                              </span>
+                      {logs.map((entry) => {
+                        const photoCount = entry.images?.length || 0;
+                        return (
+                          <div
+                            key={entry.id}
+                            className="border border-white/15 bg-[#1b1c1e]/60 p-4 sm:p-5 flex flex-col gap-4"
+                          >
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex flex-wrap items-center gap-2.5">
+                                  <span className="text-[14px] font-orbitron font-bold text-white tracking-wider">
+                                    {entry.week}
+                                  </span>
+                                  <span className="text-[11px] text-neutral-400 font-mono">
+                                    [{entry.dates}]
+                                  </span>
+                                </div>
+                                <div className="text-[12px] text-neutral-300 font-mono">
+                                  {entry.hours} • {entry.status} •{" "}
+                                  {entry.tasks.length} accomplishments •{" "}
+                                  {photoCount}{" "}
+                                  {photoCount === 1 ? "photo" : "photos"}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+                                <label className="min-h-[38px] px-3 py-1.5 border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-mono uppercase cursor-pointer inline-flex items-center">
+                                  + Photo
+                                  <input
+                                    type="file"
+                                    accept=".png,.jpg,.jpeg,.webp"
+                                    multiple
+                                    onChange={(e) =>
+                                      handleLogImagesUpload(e, entry)
+                                    }
+                                    className="hidden"
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingLog(entry)}
+                                  className="min-h-[38px] px-3.5 py-1.5 border border-white/15 hover:bg-white/10 text-neutral-200 hover:text-white text-xs font-mono uppercase cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteLog(entry.id)}
+                                  className="min-h-[38px] px-3.5 py-1.5 border border-rose-500/30 hover:bg-rose-500/15 text-rose-300 text-xs font-mono uppercase cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
-                            <div className="text-[12px] text-neutral-300 font-mono">
-                              {entry.hours} • {entry.status} •{" "}
-                              {entry.tasks.length} accomplishments
-                            </div>
+
+                            {photoCount > 0 ? (
+                              <div className="flex flex-wrap gap-2.5 border-t border-white/10 pt-3">
+                                {entry.images!.map((imgUrl, i) => (
+                                  <div
+                                    key={`${imgUrl}-${i}`}
+                                    className="relative group w-20 h-14 border border-white/15 bg-[#121314] overflow-hidden"
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={imgUrl}
+                                      alt={`${entry.week} photo ${i + 1}`}
+                                      onClick={() =>
+                                        setActivePreviewUrl(imgUrl)
+                                      }
+                                      className="w-full h-full object-cover cursor-pointer"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleRemoveLogImage(imgUrl, entry.id)
+                                      }
+                                      title="Remove photo"
+                                      className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/80 text-rose-400 hover:text-rose-300 text-[10px] font-mono flex items-center justify-center cursor-pointer"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
-                          <div className="flex items-center gap-2.5 self-end sm:self-auto">
-                            <button
-                              type="button"
-                              onClick={() => setEditingLog(entry)}
-                              className="min-h-[38px] px-3.5 py-1.5 border border-white/15 hover:bg-white/10 text-neutral-200 hover:text-white text-xs font-mono uppercase cursor-pointer"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteLog(entry.id)}
-                              className="min-h-[38px] px-3.5 py-1.5 border border-rose-500/30 hover:bg-rose-500/15 text-rose-300 text-xs font-mono uppercase cursor-pointer"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </>
                 )}
@@ -1671,8 +1908,15 @@ export default function AdminDashboard() {
 
             {/* Modal Body */}
             <div className="flex-grow bg-[#121314] p-2 sm:p-4 flex items-center justify-center overflow-hidden">
-              {activePreviewUrl.includes(".pdf") ||
-              activePreviewUrl.includes("/api/view/") ? (
+              {/\.(jpg|jpeg|png|webp|gif|svg)$/i.test(activePreviewUrl) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={activePreviewUrl}
+                  alt="Preview"
+                  className="max-w-full max-h-full object-contain select-none shadow-2xl"
+                />
+              ) : activePreviewUrl.includes(".pdf") ||
+                activePreviewUrl.includes("/api/view/") ? (
                 <object
                   data={activePreviewUrl}
                   type="application/pdf"
@@ -1684,13 +1928,6 @@ export default function AdminDashboard() {
                     title="PDF Document Viewer"
                   />
                 </object>
-              ) : /\.(jpg|jpeg|png|webp|gif|svg)/i.test(activePreviewUrl) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={activePreviewUrl}
-                  alt="Requirement Document"
-                  className="max-w-full max-h-full object-contain select-none shadow-2xl"
-                />
               ) : (
                 <div className="text-center p-6 flex flex-col gap-4 max-w-md">
                   <div className="text-amber-400 font-orbitron font-bold text-base uppercase">

@@ -59,7 +59,7 @@ export default function AppLayout({
           00
         </div>
 
-        {/* ROW 1, CELL 2: Dossier Header Block (Desktop) / Identity Header (Mobile) */}
+        {/* ROW 1, CELL 2: Portfolio Header Block (Desktop) / Identity Header (Mobile) */}
         <div className="border-b lg:border-r border-white/15 bg-[#1b1c1e]/85 lg:bg-[#252525]/60 backdrop-blur-md px-4 py-3 sm:px-6 lg:px-6 flex items-center justify-center">
           {/* Mobile/Tablet Identity Header with Centered Profile Thumbnail */}
           <div className="flex flex-col items-center text-center gap-2 lg:hidden min-w-0">
@@ -113,7 +113,7 @@ export default function AppLayout({
         >
           <span>01</span>
           <span className="[writing-mode:vertical-rl] rotate-180 tracking-[0.3em] uppercase text-neutral-600">
-            PUP // OJT-1 DOSSIER
+            PUP // OJT-1 PORTFOLIO
           </span>
           <span>02</span>
         </div>

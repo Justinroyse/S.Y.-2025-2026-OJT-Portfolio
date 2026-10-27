@@ -16,6 +16,7 @@ interface LogEntry {
   hours: string;
   status: string;
   tasks: string[];
+  images?: string[];
 }
 
 interface HTEData {
@@ -83,9 +84,9 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col gap-10 sm:gap-12 w-full">
-      {/* Hero Dossier Header */}
+      {/* Hero Header */}
       <section className="flex flex-col-reverse md:flex-row items-start md:items-center justify-between gap-8 lg:gap-12 w-full">
-        {/* Left Dossier Narrative */}
+        {/* Left Narrative */}
         <div className="flex-1 flex flex-col gap-5 max-w-2xl">
           <div className="inline-flex items-center gap-2.5 self-start px-2.5 py-1 border border-white/15 bg-[#1b1c1e]">
             <span className="w-1.5 h-1.5 bg-emerald-400" />
@@ -94,8 +95,8 @@ export default async function Home() {
             </span>
           </div>
 
-          <h2 className="text-[22px] sm:text-[26px] lg:text-[30px] font-orbitron font-bold leading-snug text-white tracking-wide uppercase">
-            Engineering Internship Dossier &amp; Deliverable Archive
+          <h2 className="text-[24px] sm:text-[28px] lg:text-[32px] font-orbitron font-bold leading-snug text-white tracking-wider uppercase">
+            Portfolio
           </h2>
 
           <p className="text-[14px] sm:text-[15px] text-neutral-300 leading-relaxed max-w-[65ch]">
