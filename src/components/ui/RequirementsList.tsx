@@ -13,22 +13,39 @@ interface RequirementsListProps {
   requirements: RequirementItem[];
 }
 
+/**
+ * Route any file URL through our inline document viewer API so browsers
+ * render PDFs and images live on-screen instead of forcing an attachment download.
+ */
+function getInlineViewUrl(url: string): string {
+  if (!url || url === "#") return "#";
+  if (url.startsWith("/api/view/")) return url;
+
+  // Extract filename from raw github URLs or /uploads/ paths
+  if (url.includes("raw.githubusercontent.com") || url.startsWith("/uploads/")) {
+    const filename = url.split("/").pop();
+    if (filename) return `/api/view/${filename}`;
+  }
+
+  return url;
+}
+
 export default function RequirementsList({ requirements }: RequirementsListProps) {
   const [activeFileUrl, setActiveFileUrl] = useState<string | null>(null);
 
   const openViewer = (e: React.MouseEvent, href: string) => {
     if (href === "#") return;
     e.preventDefault();
-    setActiveFileUrl(href);
+    const inlineUrl = getInlineViewUrl(href);
+    setActiveFileUrl(inlineUrl);
   };
 
   const closeViewer = () => {
     setActiveFileUrl(null);
   };
 
-  // Improved file type matching
   const isImage = activeFileUrl ? /\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i.test(activeFileUrl) : false;
-  const isPdf = activeFileUrl ? /\.pdf(\?.*)?$/i.test(activeFileUrl) : false;
+  const isPdf = activeFileUrl ? /\.pdf(\?.*)?$/i.test(activeFileUrl) || activeFileUrl.includes("/api/view/") : false;
 
   return (
     <>
@@ -37,11 +54,12 @@ export default function RequirementsList({ requirements }: RequirementsListProps
         {requirements.map((req, index) => {
           const docNum = String(index + 1).padStart(2, "0");
           const isUploaded = req.href && req.href !== "#";
+          const viewUrl = isUploaded ? getInlineViewUrl(req.href) : "#";
 
           return (
             <a
               key={req.key || index}
-              href={req.href}
+              href={viewUrl}
               onClick={(e) => isUploaded ? openViewer(e, req.href) : e.preventDefault()}
               className={`p-4 border transition-all flex justify-between items-center group cursor-pointer duration-200 ${
                 isUploaded
@@ -126,11 +144,17 @@ export default function RequirementsList({ requirements }: RequirementsListProps
             {/* Modal Body / Embedded File */}
             <div className="flex-grow bg-neutral-950/70 p-2 sm:p-4 flex items-center justify-center overflow-hidden">
               {isPdf ? (
-                <iframe
-                  src={activeFileUrl}
+                <object
+                  data={activeFileUrl}
+                  type="application/pdf"
                   className="w-full h-full border-0"
-                  title="PDF Document Viewer"
-                />
+                >
+                  <iframe
+                    src={activeFileUrl}
+                    className="w-full h-full border-0"
+                    title="PDF Document Viewer"
+                  />
+                </object>
               ) : isImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

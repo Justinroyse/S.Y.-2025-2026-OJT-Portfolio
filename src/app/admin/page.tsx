@@ -1161,7 +1161,11 @@ export default function AdminDashboard() {
                             <>
                               <button 
                                 type="button"
-                                onClick={() => setActivePreviewUrl(req.href)}
+                                onClick={() => {
+                                  const filename = req.href.split("/").pop();
+                                  const viewUrl = req.href.startsWith("/api/view/") ? req.href : `/api/view/${filename}`;
+                                  setActivePreviewUrl(viewUrl);
+                                }}
                                 className="px-3 py-1 border border-white/10 hover:bg-white/5 text-neutral-300 hover:text-white text-[10px] tracking-wider uppercase cursor-pointer transition-colors"
                               >
                                 VIEW_FILE
@@ -1229,12 +1233,18 @@ export default function AdminDashboard() {
 
             {/* Modal Body / Embedded File */}
             <div className="flex-grow bg-neutral-950/70 p-2 sm:p-4 flex items-center justify-center overflow-hidden">
-              {activePreviewUrl.includes(".pdf") ? (
-                <iframe
-                  src={activePreviewUrl}
+              {activePreviewUrl.includes(".pdf") || activePreviewUrl.includes("/api/view/") ? (
+                <object
+                  data={activePreviewUrl}
+                  type="application/pdf"
                   className="w-full h-full border-0"
-                  title="PDF Document Viewer"
-                />
+                >
+                  <iframe
+                    src={activePreviewUrl}
+                    className="w-full h-full border-0"
+                    title="PDF Document Viewer"
+                  />
+                </object>
               ) : /\.(jpg|jpeg|png|webp|gif|svg)/i.test(activePreviewUrl) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

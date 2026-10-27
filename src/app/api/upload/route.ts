@@ -104,19 +104,15 @@ export async function POST(req: NextRequest) {
     const ext = path.extname(file.name) || (isRequirement ? ".pdf" : ".png");
     const filename = `${reqKey}${ext}`;
     const repoPath = `public/uploads/${filename}`;
-    let fileUrl = "";
+    const fileUrl = `/api/view/${filename}`;
 
     // 1. Commit to GitHub repository if configured
     if (isGitHubConfigured()) {
-      const commitRes = await commitFileToGitHub({
+      await commitFileToGitHub({
         path: repoPath,
         content: buffer,
         message: `feat(upload): upload ${filename}`,
       });
-      // Raw CDN URL allows instant browser viewing before Vercel completes static build
-      fileUrl = commitRes.rawUrl;
-    } else {
-      fileUrl = `/uploads/${filename}`;
     }
 
     // 2. Also write to local filesystem for instant dev access
