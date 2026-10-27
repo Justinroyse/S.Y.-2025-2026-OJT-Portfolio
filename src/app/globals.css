@@ -2,7 +2,11 @@
 
 :root {
   --background: #252525;
-  --foreground: #ffffff;
+  --surface-recessed: #1b1c1e;
+  --surface-elevated: #2c2d30;
+  --foreground: #f4f4f6;
+  --muted: #a1a1aa;
+  --border-hairline: rgba(255, 255, 255, 0.14);
 }
 
 @theme inline {
@@ -13,32 +17,66 @@
   --font-orbitron: var(--font-orbitron);
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-orbitron), var(--font-sans), Arial, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
-/* Technical Cyberpunk Scrollbar */
+/* Visible, high-contrast keyboard focus ring */
+:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 2px;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Technical Blueprint Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: #1b1c1e;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 0px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.3);
 }
 
-/* Cyber grid utility */
+/* Architectural blueprint coordinate grid */
 .tech-grid {
-  background-size: 30px 30px;
-  background-image: 
-    linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
 }
+
+/* Hide horizontal scrollbar on touch nav bars while keeping scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

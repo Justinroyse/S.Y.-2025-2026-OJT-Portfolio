@@ -3,27 +3,27 @@
 import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
+const OPTIONS = [
+  { name: "HOME", path: "/", code: "SEC-01" },
+  { name: "ABOUT", path: "/about", code: "SEC-02" },
+  { name: "REQUIREMENTS", path: "/requirements", code: "SEC-03" },
+  { name: "LOG", path: "/log", code: "SEC-04" },
+];
+
 export default function DropdownSelector() {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const options = [
-    { name: "HOME", path: "/" },
-    { name: "ABOUT", path: "/about" },
-    { name: "REQUIREMENTS", path: "/requirements" },
-    { name: "LOG", path: "/log" },
-  ];
-
-  // Map sub-paths to active options
   const getCurrentOption = () => {
-    if (pathname === "/") return options[0];
-    if (pathname.startsWith("/about")) return options[1];
-    if (pathname.startsWith("/requirements")) return options[2];
-    if (pathname.startsWith("/log")) return options[3];
-    if (pathname.startsWith("/admin")) return { name: "ADMIN", path: "/admin" };
-    return options[0];
+    if (pathname === "/") return OPTIONS[0];
+    if (pathname.startsWith("/about")) return OPTIONS[1];
+    if (pathname.startsWith("/requirements")) return OPTIONS[2];
+    if (pathname.startsWith("/log")) return OPTIONS[3];
+    if (pathname.startsWith("/admin"))
+      return { name: "ADMIN", path: "/admin", code: "CMS-00" };
+    return OPTIONS[0];
   };
 
   const currentOption = getCurrentOption();
@@ -33,30 +33,50 @@ export default function DropdownSelector() {
     setIsOpen(false);
   };
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
         setIsOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
   return (
-    <div ref={dropdownRef} className="relative font-orbitron w-[195px] z-50">
+    <div
+      ref={dropdownRef}
+      className="relative font-orbitron w-[165px] sm:w-[195px] shrink-0 z-40"
+    >
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-[30px] bg-[#d9d9d9] text-[#252525] px-4 flex items-center justify-between font-normal text-[14px] uppercase tracking-widest transition-all hover:bg-white active:scale-[0.98] cursor-pointer"
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label={`Jump to section, current section ${currentOption.name}`}
+        className="w-full min-h-[38px] lg:min-h-[36px] bg-[#e4e4e7] text-[#18191b] px-3.5 flex items-center justify-between text-[12px] sm:text-[13px] uppercase tracking-widest transition-colors hover:bg-white active:scale-[0.99] cursor-pointer"
       >
-        <span className="font-bold">{currentOption.name}</span>
-        <div className="flex flex-col items-center justify-center">
-          {/* Double Chevron up and down */}
+        <span className="font-bold truncate">{currentOption.name}</span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="hidden sm:inline text-[9px] font-mono text-neutral-600 font-semibold">
+            {currentOption.code}
+          </span>
           <svg
-            className="w-3 h-3 text-[#252525]"
+            className={`w-3.5 h-3.5 text-[#18191b] transition-transform duration-150 ${
+              isOpen ? "rotate-180" : ""
+            }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -65,28 +85,42 @@ export default function DropdownSelector() {
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth="3"
+              strokeWidth="2.5"
               d="M8 9l4-4 4 4m0 6l-4 4-4-4"
             />
           </svg>
         </div>
       </button>
 
-      {isOpen && (
-        <div className="absolute top-[35px] left-0 w-full bg-[#1e1e1e] border border-white/20 rounded-none overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150">
-          {options.map((option) => (
-            <button
-              key={option.path}
-              onClick={() => handleSelect(option.path)}
-              className={`w-full text-left px-4 py-2.5 text-[12px] tracking-wider uppercase transition-colors hover:bg-white/10 cursor-pointer ${
-                option.path === currentOption.path ? "text-white font-bold bg-white/5" : "text-neutral-400"
-              }`}
-            >
-              {option.name}
-            </button>
-          ))}
+      {isOpen ? (
+        <div
+          role="listbox"
+          className="absolute top-[calc(100%+4px)] right-0 lg:left-0 w-full bg-[#1b1c1e] border border-white/25 shadow-2xl overflow-hidden z-50"
+        >
+          {OPTIONS.map((option) => {
+            const active = option.path === currentOption.path;
+            return (
+              <button
+                key={option.path}
+                type="button"
+                role="option"
+                aria-selected={active}
+                onClick={() => handleSelect(option.path)}
+                className={`w-full min-h-[42px] text-left px-3.5 py-2.5 text-[11px] sm:text-[12px] tracking-wider uppercase flex items-center justify-between transition-colors hover:bg-white/10 cursor-pointer ${
+                  active
+                    ? "text-white font-bold bg-white/8"
+                    : "text-neutral-300"
+                }`}
+              >
+                <span>{option.name}</span>
+                <span className="text-[9px] font-mono text-neutral-500">
+                  {option.code}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

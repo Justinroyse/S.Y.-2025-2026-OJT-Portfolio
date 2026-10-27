@@ -44,7 +44,7 @@ interface HTEData {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  
+
   // Auth state
   const [passcode, setPasscode] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -52,13 +52,18 @@ export default function AdminDashboard() {
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
   // CMS state
-  const [activeTab, setActiveTab] = useState<"profile" | "hte" | "logs" | "uploads">("profile");
+  const [activeTab, setActiveTab] = useState<
+    "profile" | "hte" | "logs" | "uploads"
+  >("profile");
   const [aboutData, setAboutData] = useState<AboutData | null>(null);
   const [hteData, setHteData] = useState<HTEData | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [requirements, setRequirements] = useState<RequirementItem[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{
+    text: string;
+    type: "success" | "error";
+  } | null>(null);
 
   // Edit states for Weekly Logs
   const [editingLog, setEditingLog] = useState<Partial<LogEntry> | null>(null);
@@ -74,6 +79,18 @@ export default function AdminDashboard() {
   // In-site File Preview modal state
   const [activePreviewUrl, setActivePreviewUrl] = useState<string | null>(null);
 
+  // Close preview modal on Escape
+  useEffect(() => {
+    if (!activePreviewUrl) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setActivePreviewUrl(null);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activePreviewUrl]);
+
   // Fetch CMS Data
   async function fetchCMSData() {
     setIsLoadingData(true);
@@ -86,10 +103,10 @@ export default function AdminDashboard() {
         setRequirements(data.requirements);
         setHteData(data.hte);
       } else {
-        showStatus("Failed to load CMS databases", "error");
+        showStatus("Could not load CMS data from server.", "error");
       }
     } catch {
-      showStatus("Data fetching encountered an error", "error");
+      showStatus("Network error while fetching CMS data.", "error");
     } finally {
       setIsLoadingData(false);
     }
@@ -139,10 +156,10 @@ export default function AdminDashboard() {
         setIsAuthenticated(true);
         fetchCMSData();
       } else {
-        setAuthError(data.error || "Authentication failed");
+        setAuthError(data.error || "Invalid passcode.");
       }
     } catch {
-      setAuthError("Server communication error");
+      setAuthError("Unable to reach authentication server.");
     } finally {
       setIsSubmittingAuth(false);
     }
@@ -159,7 +176,7 @@ export default function AdminDashboard() {
       setRequirements([]);
       router.push("/");
     } catch {
-      showStatus("Logout failed", "error");
+      showStatus("Logout failed.", "error");
     }
   }
 
@@ -180,12 +197,13 @@ export default function AdminDashboard() {
 
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showStatus("Profile details updated successfully!");
+        showStatus("Profile details saved.");
+        router.refresh();
       } else {
-        showStatus(data.error || "Failed to update profile", "error");
+        showStatus(data.error || "Could not update profile.", "error");
       }
     } catch {
-      showStatus("Server error during save", "error");
+      showStatus("Server error while saving profile.", "error");
     }
   }
 
@@ -206,12 +224,13 @@ export default function AdminDashboard() {
 
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showStatus("HTE Profile updated successfully!");
+        showStatus("HTE profile saved.");
+        router.refresh();
       } else {
-        showStatus(data.error || "Failed to update HTE Profile", "error");
+        showStatus(data.error || "Could not update HTE profile.", "error");
       }
     } catch {
-      showStatus("Server error during HTE save", "error");
+      showStatus("Server error while saving HTE profile.", "error");
     }
   }
 
@@ -224,7 +243,7 @@ export default function AdminDashboard() {
     formData.append("file", file);
     formData.append("key", "hte_logo");
 
-    showStatus("Uploading HTE Seal/Logo...");
+    showStatus("Uploading HTE logo...");
 
     try {
       const res = await fetch("/api/upload", {
@@ -237,8 +256,7 @@ export default function AdminDashboard() {
         if (hteData) {
           const updatedHte = { ...hteData, logoUrl: data.url };
           setHteData(updatedHte);
-          
-          // Auto-save the logo url to database
+
           await fetch("/api/cms", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -248,13 +266,14 @@ export default function AdminDashboard() {
             }),
           });
         }
-        showStatus("HTE Seal uploaded and saved successfully!");
+        showStatus("HTE logo uploaded and saved.");
+        router.refresh();
       } else {
         const err = await res.json();
-        showStatus(err.error || "Seal upload failed", "error");
+        showStatus(err.error || "Logo upload failed.", "error");
       }
     } catch {
-      showStatus("Server connection error during upload", "error");
+      showStatus("Network error during upload.", "error");
     }
   }
 
@@ -299,20 +318,21 @@ export default function AdminDashboard() {
 
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showStatus(isNew ? "Added new OJT log entry!" : "Log entry updated!");
+        showStatus(isNew ? "Weekly log entry added." : "Weekly log updated.");
         setEditingLog(null);
         fetchCMSData();
+        router.refresh();
       } else {
-        showStatus(data.error || "Failed to save log entry", "error");
+        showStatus(data.error || "Could not save log entry.", "error");
       }
     } catch {
-      showStatus("Server error while saving log", "error");
+      showStatus("Server error while saving log entry.", "error");
     }
   }
 
   // Delete Log
   async function handleDeleteLog(id: string) {
-    if (!confirm("Are you sure you want to delete this log entry?")) return;
+    if (!confirm("Delete this weekly log entry?")) return;
 
     try {
       const res = await fetch("/api/cms", {
@@ -326,18 +346,22 @@ export default function AdminDashboard() {
 
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        showStatus("Log entry deleted successfully!");
+        showStatus("Weekly log entry deleted.");
         fetchCMSData();
+        router.refresh();
       } else {
-        showStatus(data.error || "Failed to delete log entry", "error");
+        showStatus(data.error || "Could not delete log entry.", "error");
       }
     } catch {
-      showStatus("Server error during deletion", "error");
+      showStatus("Server error during deletion.", "error");
     }
   }
 
   // Upload File for Requirement
-  async function handleFileUpload(key: string, e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileUpload(
+    key: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -354,20 +378,21 @@ export default function AdminDashboard() {
       });
 
       if (res.ok) {
-        showStatus("Document uploaded successfully!");
+        showStatus("Document uploaded.");
         fetchCMSData();
+        router.refresh();
       } else {
         const err = await res.json();
-        showStatus(err.error || "File upload failed", "error");
+        showStatus(err.error || "File upload failed.", "error");
       }
     } catch {
-      showStatus("Server connection error during upload", "error");
+      showStatus("Network error during upload.", "error");
     }
   }
 
   // Delete File Upload
   async function handleDeleteFile(key: string) {
-    if (!confirm("Are you sure you want to remove this document attachment?")) return;
+    if (!confirm("Remove this attached document?")) return;
 
     try {
       const res = await fetch("/api/upload", {
@@ -377,13 +402,14 @@ export default function AdminDashboard() {
       });
 
       if (res.ok) {
-        showStatus("Document removed successfully!");
+        showStatus("Document removed.");
         fetchCMSData();
+        router.refresh();
       } else {
-        showStatus("Failed to delete document", "error");
+        showStatus("Could not remove document.", "error");
       }
     } catch {
-      showStatus("Server error during deletion", "error");
+      showStatus("Server error during deletion.", "error");
     }
   }
 
@@ -392,9 +418,12 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!newReqName.trim() || !newReqKey.trim()) return;
 
-    const key = newReqKey.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_");
+    const key = newReqKey
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_");
     if (requirements.some((r) => r.key === key)) {
-      showStatus("Requirement key already exists", "error");
+      showStatus("A requirement with this key already exists.", "error");
       return;
     }
 
@@ -414,24 +443,29 @@ export default function AdminDashboard() {
       });
 
       if (res.ok) {
-        showStatus("New requirement definition added!");
+        showStatus("Requirement definition added.");
         setNewReqName("");
         setNewReqKey("");
         setShowAddReqForm(false);
         fetchCMSData();
+        router.refresh();
       } else {
-        showStatus("Failed to add requirement", "error");
+        showStatus("Could not add requirement.", "error");
       }
     } catch {
-      showStatus("Server error while adding requirement", "error");
+      showStatus("Server error while adding requirement.", "error");
     }
   }
 
   // Delete Requirement definition (along with file)
   async function handleDeleteRequirementDefinition(key: string) {
-    if (!confirm("Are you sure you want to delete this requirement definition? This will also delete any uploaded document attachment associated with it.")) return;
+    if (
+      !confirm(
+        "Delete this requirement item and any uploaded file attached to it?"
+      )
+    )
+      return;
 
-    // Delete uploaded file if present
     const item = requirements.find((r) => r.key === key);
     if (item && item.href && item.href !== "#") {
       try {
@@ -441,7 +475,7 @@ export default function AdminDashboard() {
           body: JSON.stringify({ key }),
         });
       } catch (err) {
-        console.warn("Could not delete file attachment during definition removal: ", err);
+        console.warn("Could not delete file attachment:", err);
       }
     }
 
@@ -458,13 +492,14 @@ export default function AdminDashboard() {
       });
 
       if (res.ok) {
-        showStatus("Requirement definition deleted!");
+        showStatus("Requirement deleted.");
         fetchCMSData();
+        router.refresh();
       } else {
-        showStatus("Failed to delete definition", "error");
+        showStatus("Could not delete requirement.", "error");
       }
     } catch {
-      showStatus("Server error while deleting definition", "error");
+      showStatus("Server error while deleting requirement.", "error");
     }
   }
 
@@ -488,24 +523,27 @@ export default function AdminDashboard() {
       });
 
       if (res.ok) {
-        showStatus("Requirement renamed successfully!");
+        showStatus("Requirement renamed.");
         setEditingReqKey(null);
         setEditingReqName("");
         fetchCMSData();
+        router.refresh();
       } else {
-        showStatus("Failed to rename requirement", "error");
+        showStatus("Could not rename requirement.", "error");
       }
     } catch {
-      showStatus("Server error while renaming requirement", "error");
+      showStatus("Server error while renaming requirement.", "error");
     }
   }
 
   // Render Loader
   if (isAuthenticated === null) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] font-orbitron gap-4">
-        <div className="w-10 h-10 border-2 border-white/20 border-t-white animate-spin rounded-full" />
-        <span className="text-xs text-neutral-500 tracking-widest uppercase">INITIALIZING_AUTH_CHECK...</span>
+      <div className="flex flex-col items-center justify-center min-h-[360px] gap-4">
+        <div className="w-9 h-9 border-2 border-white/20 border-t-white animate-spin rounded-full" />
+        <span className="text-xs font-mono text-neutral-400 tracking-widest uppercase">
+          Verifying session...
+        </span>
       </div>
     );
   }
@@ -513,208 +551,301 @@ export default function AdminDashboard() {
   // Render Login Page
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] p-6">
-        <form onSubmit={handleLogin} className="w-full max-w-sm border border-white/10 bg-neutral-900/10 p-8 flex flex-col gap-6 font-orbitron">
-          <div className="text-center border-b border-white/10 pb-4">
-            <h2 className="text-[16px] font-bold text-white tracking-[0.2em] uppercase">ADMIN_PASSKEY</h2>
-            <p className="text-[9px] text-neutral-500 font-mono tracking-widest mt-1">RESTRICTED_ACCESS</p>
+      <div className="flex items-center justify-center min-h-[380px] py-6">
+        <form
+          onSubmit={handleLogin}
+          className="w-full max-w-sm border border-white/15 bg-[#1b1c1e] p-6 sm:p-8 flex flex-col gap-6"
+        >
+          <div className="border-b border-white/10 pb-4">
+            <span className="text-[10px] text-neutral-400 font-mono tracking-[0.2em] uppercase">
+              RESTRICTED ACCESS
+            </span>
+            <h2 className="text-[18px] font-orbitron font-bold text-white tracking-[0.16em] uppercase mt-1">
+              Admin Console Sign In
+            </h2>
           </div>
-          
+
           <div className="flex flex-col gap-2">
-            <label className="text-[10px] text-neutral-500 tracking-wider">ENTER PASSCODE:</label>
+            <label
+              htmlFor="admin-passcode"
+              className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase"
+            >
+              Passcode
+            </label>
             <input
+              id="admin-passcode"
               type="password"
               value={passcode}
               onChange={(e) => setPasscode(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-[#1b1b1b] border border-white/10 text-white font-mono px-4 py-2.5 text-sm rounded-none focus:outline-none focus:border-white/30 text-center tracking-[0.25em]"
+              placeholder="Enter admin passcode"
+              className="w-full min-h-[42px] bg-[#121314] border border-white/15 text-white font-mono px-4 py-2.5 text-sm rounded-none focus:outline-none focus:border-white/50 tracking-widest"
               required
             />
           </div>
 
-          {authError && (
-            <div className="text-[11px] text-rose-500 bg-rose-500/10 border border-rose-500/20 p-2 text-center tracking-wide uppercase font-mono">
-              [!] {authError}
+          {authError ? (
+            <div className="text-[12px] text-rose-300 bg-rose-500/10 border border-rose-500/30 p-3 font-mono">
+              {authError}
             </div>
-          )}
+          ) : null}
 
           <button
             type="submit"
             disabled={isSubmittingAuth}
-            className="w-full h-[36px] bg-[#d9d9d9] hover:bg-white text-[#252525] font-bold text-xs tracking-widest uppercase cursor-pointer transition-all active:scale-[0.98]"
+            className="w-full min-h-[44px] bg-[#e4e4e7] hover:bg-white text-[#18191b] font-orbitron font-bold text-xs tracking-widest uppercase cursor-pointer transition-colors disabled:opacity-50"
           >
-            {isSubmittingAuth ? "VALIDATING..." : "SUBMIT_PASSKEY"}
+            {isSubmittingAuth ? "Signing in..." : "Unlock Console"}
           </button>
         </form>
       </div>
     );
   }
 
+  const submittedDocsCount = requirements.filter(
+    (r) => Boolean(r.href && r.href !== "#")
+  ).length;
+
   // Render Main Admin Panel
   return (
-    <div className="flex flex-col gap-8 w-full animate-in fade-in duration-300">
-      
+    <div className="flex flex-col gap-8 w-full">
       {/* Admin Header */}
-      <div className="border-b border-white/10 pb-4 flex justify-between items-center">
+      <div className="border-b border-white/15 pb-4 flex flex-wrap justify-between items-center gap-4">
         <div className="flex flex-col">
-          <h2 className="text-[18px] md:text-[22px] font-bold font-orbitron tracking-[0.25em] text-white uppercase">
-            ADMIN_CONSOLE
-          </h2>
-          <span className="text-[9px] font-mono text-neutral-500 tracking-wider">
-            SESSION: ACTIVE (HOST: CLOUD/HYBRID)
+          <span className="text-[10px] font-mono text-emerald-400 tracking-[0.2em] uppercase">
+            AUTHENTICATED SESSION
           </span>
+          <h2 className="text-[20px] sm:text-[24px] font-bold font-orbitron tracking-[0.16em] text-white uppercase mt-1">
+            Portfolio CMS Console
+          </h2>
         </div>
         <button
+          type="button"
           onClick={handleLogout}
-          className="px-4 py-1.5 border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 font-bold font-orbitron tracking-widest text-[10px] uppercase cursor-pointer transition-colors"
+          className="min-h-[40px] px-4 py-2 border border-rose-500/35 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold font-orbitron tracking-widest text-[11px] uppercase cursor-pointer transition-colors"
         >
-          LOGOUT
+          Sign Out
         </button>
       </div>
 
-      {/* Status Messages */}
-      {statusMessage && (
-        <div className={`text-[12px] font-mono p-3 tracking-wide uppercase border text-center font-bold ${
-          statusMessage.type === "success" 
-            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" 
-            : "border-rose-500/20 bg-rose-500/10 text-rose-400"
-        }`}>
-          {statusMessage.type === "success" ? "[SUCCESS] " : "[ERR] "} {statusMessage.text}
+      {/* Status Toast */}
+      {statusMessage ? (
+        <div
+          role="status"
+          className={`text-[12px] font-mono p-3.5 tracking-wide border font-semibold ${
+            statusMessage.type === "success"
+              ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-300"
+              : "border-rose-500/35 bg-rose-500/10 text-rose-300"
+          }`}
+        >
+          {statusMessage.text}
         </div>
-      )}
+      ) : null}
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-white/15 gap-2 select-none overflow-x-auto pb-1">
-        {([
-          { id: "profile", label: "ABOUT PROFILE" },
-          { id: "hte", label: "HTE PROFILE" },
-          { id: "logs", label: "OJT WEEKLY LOGS" },
-          { id: "uploads", label: "DOCUMENT UPLOADS" }
-        ] as const).map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => { setActiveTab(tab.id); setEditingLog(null); }}
-            className={`px-4 py-2 text-[11px] md:text-[12px] font-bold font-orbitron tracking-wider uppercase cursor-pointer border-t border-x transition-all ${
-              activeTab === tab.id
-                ? "border-white/15 bg-neutral-900/10 text-white font-bold"
-                : "border-transparent text-neutral-500 hover:text-neutral-300"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div
+        role="tablist"
+        aria-label="CMS Sections"
+        className="flex border-b border-white/15 gap-1.5 sm:gap-2 select-none overflow-x-auto no-scrollbar"
+      >
+        {(
+          [
+            { id: "profile", label: "Student Profile" },
+            { id: "hte", label: "HTE Establishment" },
+            { id: "logs", label: `Weekly Logs (${logs.length})` },
+            {
+              id: "uploads",
+              label: `Deliverables (${submittedDocsCount}/${requirements.length})`,
+            },
+          ] as const
+        ).map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setEditingLog(null);
+              }}
+              className={`min-h-[44px] px-4 py-2.5 text-[11px] sm:text-[12px] font-orbitron tracking-wider uppercase whitespace-nowrap cursor-pointer border-t border-x transition-colors ${
+                active
+                  ? "border-white/20 bg-[#1b1c1e] text-white font-bold"
+                  : "border-transparent text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Tab Content Box */}
-      <div className="min-h-[400px]">
+      {/* Tab Content */}
+      <div className="min-h-[360px]">
         {isLoadingData ? (
-          <div className="flex flex-col items-center justify-center min-h-[300px] font-orbitron gap-2">
+          <div className="flex flex-col items-center justify-center min-h-[280px] gap-3">
             <div className="w-8 h-8 border-2 border-white/20 border-t-white animate-spin rounded-full" />
-            <span className="text-[10px] text-neutral-500 tracking-wider">SYNCING_DATA...</span>
+            <span className="text-[11px] font-mono text-neutral-400 tracking-wider uppercase">
+              Loading portfolio records...
+            </span>
           </div>
         ) : (
           <>
             {/* 1. ABOUT PROFILE EDITOR TAB */}
-            {activeTab === "profile" && aboutData && (
-              <form onSubmit={handleSaveProfile} className="flex flex-col gap-6 max-h-[500px] overflow-y-auto pr-2 font-orbitron">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {activeTab === "profile" && aboutData ? (
+              <form
+                onSubmit={handleSaveProfile}
+                className="flex flex-col gap-6 border border-white/15 bg-[#1b1c1e]/60 p-5 sm:p-6"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-neutral-500 tracking-wider">STUDENT FULL NAME</label>
+                    <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                      Student Full Name
+                    </label>
                     <input
                       type="text"
                       value={aboutData.name}
-                      onChange={(e) => setAboutData({ ...aboutData, name: e.target.value })}
-                      className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20"
+                      onChange={(e) =>
+                        setAboutData({ ...aboutData, name: e.target.value })
+                      }
+                      className="min-h-[42px] bg-[#121314] border border-white/15 text-white px-3.5 py-2 text-sm focus:outline-none focus:border-white/40"
                       required
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-neutral-500 tracking-wider">COURSE & SECTION</label>
+                    <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                      Course &amp; Section
+                    </label>
                     <input
                       type="text"
                       value={aboutData.course}
-                      onChange={(e) => setAboutData({ ...aboutData, course: e.target.value })}
-                      className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20"
+                      onChange={(e) =>
+                        setAboutData({ ...aboutData, course: e.target.value })
+                      }
+                      className="min-h-[42px] bg-[#121314] border border-white/15 text-white px-3.5 py-2 text-sm focus:outline-none focus:border-white/40"
                       required
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-neutral-500 tracking-wider">STUDENT ID NUMBER</label>
+                    <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                      Student ID Number
+                    </label>
                     <input
                       type="text"
                       value={aboutData.studentId}
-                      onChange={(e) => setAboutData({ ...aboutData, studentId: e.target.value })}
-                      className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20"
+                      onChange={(e) =>
+                        setAboutData({
+                          ...aboutData,
+                          studentId: e.target.value,
+                        })
+                      }
+                      className="min-h-[42px] bg-[#121314] border border-white/15 text-white px-3.5 py-2 text-sm font-mono focus:outline-none focus:border-white/40"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] text-neutral-500 tracking-wider">BIOGRAPHY</label>
+                  <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                    Engineering Biography
+                  </label>
                   <textarea
                     rows={4}
                     value={aboutData.biography}
-                    onChange={(e) => setAboutData({ ...aboutData, biography: e.target.value })}
-                    className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20 font-sans"
+                    onChange={(e) =>
+                      setAboutData({ ...aboutData, biography: e.target.value })
+                    }
+                    className="bg-[#121314] border border-white/15 text-white px-3.5 py-2.5 text-sm leading-relaxed focus:outline-none focus:border-white/40 font-sans"
                     required
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] text-neutral-500 tracking-wider">INTERNSHIP OBJECTIVES</label>
+                  <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                    Internship Objectives
+                  </label>
                   <textarea
                     rows={4}
                     value={aboutData.objective}
-                    onChange={(e) => setAboutData({ ...aboutData, objective: e.target.value })}
-                    className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20 font-sans"
+                    onChange={(e) =>
+                      setAboutData({ ...aboutData, objective: e.target.value })
+                    }
+                    className="bg-[#121314] border border-white/15 text-white px-3.5 py-2.5 text-sm leading-relaxed focus:outline-none focus:border-white/40 font-sans"
                     required
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] text-neutral-500 tracking-wider">SKILLS / COMPETENCIES (COMMA SEPARATED)</label>
+                  <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                    Competencies (Comma Separated)
+                  </label>
                   <input
                     type="text"
                     value={aboutData.skillSet.join(", ")}
-                    onChange={(e) => setAboutData({ ...aboutData, skillSet: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })}
-                    className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20"
+                    onChange={(e) =>
+                      setAboutData({
+                        ...aboutData,
+                        skillSet: e.target.value
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    className="min-h-[42px] bg-[#121314] border border-white/15 text-white px-3.5 py-2 text-sm focus:outline-none focus:border-white/40"
                     placeholder="Next.js, Python, QA Testing"
                   />
                 </div>
 
-                {/* Edit Contacts list */}
+                {/* Edit Contacts list (Responsive on Mobile) */}
                 <div className="flex flex-col gap-3">
-                  <label className="text-[10px] text-neutral-500 tracking-wider">SECURE COMMUNICATIONS (CONTACT PATHS)</label>
-                  <div className="flex flex-col gap-3 border border-white/5 bg-neutral-900/10 p-4">
+                  <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                    Contact Channels
+                  </label>
+                  <div className="flex flex-col gap-3 border border-white/10 bg-[#121314]/60 p-4">
                     {aboutData.contactInfo.map((contact, idx) => (
-                      <div key={idx} className="grid grid-cols-3 gap-3">
+                      <div
+                        key={idx}
+                        className="grid grid-cols-1 sm:grid-cols-[120px_1fr_1fr] gap-2.5 sm:gap-3 pb-3 sm:pb-0 border-b sm:border-b-0 border-white/10 last:border-b-0 last:pb-0"
+                      >
                         <input
                           type="text"
                           value={contact.label}
                           disabled
-                          className="bg-neutral-800/40 border border-white/5 text-neutral-400 px-3 py-1.5 text-[10px] focus:outline-none"
+                          className="min-h-[38px] bg-white/5 border border-white/10 text-neutral-400 px-3 py-1.5 text-xs font-mono uppercase focus:outline-none"
                         />
                         <input
                           type="text"
                           value={contact.value}
                           onChange={(e) => {
                             const newContact = [...aboutData.contactInfo];
-                            newContact[idx].value = e.target.value;
-                            setAboutData({ ...aboutData, contactInfo: newContact });
+                            newContact[idx] = {
+                              ...newContact[idx],
+                              value: e.target.value,
+                            };
+                            setAboutData({
+                              ...aboutData,
+                              contactInfo: newContact,
+                            });
                           }}
-                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-1.5 text-xs focus:outline-none focus:border-white/20"
-                          placeholder="Link handle/number"
+                          className="min-h-[38px] bg-[#121314] border border-white/15 text-white px-3 py-1.5 text-xs sm:text-sm focus:outline-none focus:border-white/40"
+                          placeholder="Display value"
                         />
                         <input
                           type="text"
                           value={contact.href}
                           onChange={(e) => {
                             const newContact = [...aboutData.contactInfo];
-                            newContact[idx].href = e.target.value;
-                            setAboutData({ ...aboutData, contactInfo: newContact });
+                            newContact[idx] = {
+                              ...newContact[idx],
+                              href: e.target.value,
+                            };
+                            setAboutData({
+                              ...aboutData,
+                              contactInfo: newContact,
+                            });
                           }}
-                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-1.5 text-xs focus:outline-none focus:border-white/20"
+                          className="min-h-[38px] bg-[#121314] border border-white/15 text-white px-3 py-1.5 text-xs sm:text-sm font-mono focus:outline-none focus:border-white/40"
                           placeholder="mailto:, https://..."
                         />
                       </div>
@@ -722,93 +853,117 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-2">
                   <button
                     type="submit"
-                    className="h-[36px] px-8 bg-[#d9d9d9] hover:bg-white text-[#252525] font-bold text-xs tracking-widest uppercase cursor-pointer transition-all active:scale-[0.98]"
+                    className="min-h-[44px] px-8 bg-[#e4e4e7] hover:bg-white text-[#18191b] font-orbitron font-bold text-xs tracking-widest uppercase cursor-pointer transition-colors"
                   >
-                    SAVE_PROFILE_DETAILS
+                    Save Profile Changes
                   </button>
                 </div>
               </form>
-            )}
+            ) : null}
 
             {/* HTE PROFILE EDITOR TAB */}
-            {activeTab === "hte" && hteData && (
-              <form onSubmit={handleSaveHte} className="flex flex-col gap-6 max-h-[500px] overflow-y-auto pr-2 font-orbitron">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {activeTab === "hte" && hteData ? (
+              <form
+                onSubmit={handleSaveHte}
+                className="flex flex-col gap-6 border border-white/15 bg-[#1b1c1e]/60 p-5 sm:p-6"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-neutral-500 tracking-wider">HTE ESTABLISHMENT NAME</label>
+                    <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                      Host Establishment Name
+                    </label>
                     <input
                       type="text"
                       value={hteData.name}
-                      onChange={(e) => setHteData({ ...hteData, name: e.target.value })}
-                      className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20"
+                      onChange={(e) =>
+                        setHteData({ ...hteData, name: e.target.value })
+                      }
+                      className="min-h-[42px] bg-[#121314] border border-white/15 text-white px-3.5 py-2 text-sm focus:outline-none focus:border-white/40"
                       required
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] text-neutral-500 tracking-wider">INTERNSHIP DESIGNATION</label>
+                    <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                      Internship Designation / Role
+                    </label>
                     <input
                       type="text"
                       value={hteData.designation}
-                      onChange={(e) => setHteData({ ...hteData, designation: e.target.value })}
-                      className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20"
+                      onChange={(e) =>
+                        setHteData({ ...hteData, designation: e.target.value })
+                      }
+                      className="min-h-[42px] bg-[#121314] border border-white/15 text-white px-3.5 py-2 text-sm focus:outline-none focus:border-white/40"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] text-neutral-500 tracking-wider">COMPANY DETAILS / DESCRIPTION</label>
+                  <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                    Establishment Overview &amp; Role Description
+                  </label>
                   <textarea
-                    rows={6}
+                    rows={5}
                     value={hteData.details}
-                    onChange={(e) => setHteData({ ...hteData, details: e.target.value })}
-                    className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none focus:border-white/20 font-sans"
+                    onChange={(e) =>
+                      setHteData({ ...hteData, details: e.target.value })
+                    }
+                    className="bg-[#121314] border border-white/15 text-white px-3.5 py-2.5 text-sm leading-relaxed focus:outline-none focus:border-white/40 font-sans"
                     required
                   />
                 </div>
 
                 {/* Logo upload block */}
                 <div className="flex flex-col gap-3">
-                  <label className="text-[10px] text-neutral-500 tracking-wider">HTE LOGO / SEAL</label>
-                  <div className="border border-white/5 bg-neutral-900/10 p-4 flex flex-col sm:flex-row items-center gap-6">
-                    {/* Logo display */}
-                    <div className="w-[100px] h-[100px] border border-white/15 bg-neutral-950 flex items-center justify-center relative overflow-hidden select-none">
+                  <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                    HTE Official Seal / Logo
+                  </label>
+                  <div className="border border-white/10 bg-[#121314]/60 p-4 flex flex-col sm:flex-row items-center gap-6">
+                    <div className="w-[110px] h-[110px] border border-white/20 bg-[#18191b] flex items-center justify-center relative overflow-hidden select-none shrink-0">
                       {hteData.logoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={hteData.logoUrl} alt="Logo preview" className="max-w-[90%] max-h-[90%] object-contain" />
+                        <img
+                          src={hteData.logoUrl}
+                          alt="HTE Logo preview"
+                          className="max-w-[88%] max-h-[88%] object-contain"
+                        />
                       ) : (
-                        <span className="text-[9px] text-neutral-600 font-mono">[NO_SEAL]</span>
+                        <span className="text-[10px] text-neutral-500 font-mono">
+                          NO LOGO
+                        </span>
                       )}
                     </div>
-                    
-                    <div className="flex flex-col gap-3">
-                      <label className="px-4 py-2 border border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 text-xs tracking-wider uppercase cursor-pointer transition-colors text-center">
-                        UPLOAD NEW LOGO
-                        <input 
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="min-h-[40px] px-4 py-2 border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-mono tracking-wider uppercase cursor-pointer transition-colors inline-flex items-center">
+                        Upload New Seal
+                        <input
                           type="file"
                           accept=".png,.jpg,.jpeg,.svg,.webp"
                           onChange={handleLogoUpload}
                           className="hidden"
                         />
                       </label>
-                      {hteData.logoUrl && (
+                      {hteData.logoUrl ? (
                         <button
                           type="button"
                           onClick={async () => {
-                            if (!confirm("Remove logo?")) return;
+                            if (!confirm("Remove current HTE logo?")) return;
                             try {
                               await fetch("/api/upload", {
                                 method: "DELETE",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ key: "hte_logo", url: hteData.logoUrl })
+                                body: JSON.stringify({
+                                  key: "hte_logo",
+                                  url: hteData.logoUrl,
+                                }),
                               });
                               const updatedHte = { ...hteData, logoUrl: "" };
                               setHteData(updatedHte);
-                              
-                              // Save database details
+
                               await fetch("/api/cms", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
@@ -817,94 +972,126 @@ export default function AdminDashboard() {
                                   payload: updatedHte,
                                 }),
                               });
-                              showStatus("HTE Logo removed.");
+                              showStatus("HTE logo removed.");
+                              router.refresh();
                             } catch {
-                              showStatus("Failed to remove logo", "error");
+                              showStatus("Could not remove logo.", "error");
                             }
                           }}
-                          className="px-4 py-2 border border-rose-500/20 hover:bg-rose-500/10 text-rose-400 text-xs tracking-wider uppercase cursor-pointer"
+                          className="min-h-[40px] px-4 py-2 border border-rose-500/30 hover:bg-rose-500/15 text-rose-300 text-xs font-mono tracking-wider uppercase cursor-pointer transition-colors"
                         >
-                          REMOVE LOGO
+                          Remove Seal
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-2">
                   <button
                     type="submit"
-                    className="h-[36px] px-8 bg-[#d9d9d9] hover:bg-white text-[#252525] font-bold text-xs tracking-widest uppercase cursor-pointer transition-all active:scale-[0.98]"
+                    className="min-h-[44px] px-8 bg-[#e4e4e7] hover:bg-white text-[#18191b] font-orbitron font-bold text-xs tracking-widest uppercase cursor-pointer transition-colors"
                   >
-                    SAVE_HTE_DETAILS
+                    Save HTE Details
                   </button>
                 </div>
               </form>
-            )}
+            ) : null}
 
             {/* 2. WEEKLY LOGS TAB */}
-            {activeTab === "logs" && (
+            {activeTab === "logs" ? (
               <div className="flex flex-col gap-6">
-                
-                {/* Mode: Editing/Adding Log Form */}
                 {editingLog ? (
-                  <form onSubmit={handleSaveLog} className="border border-white/10 bg-neutral-900/10 p-6 flex flex-col gap-5 font-orbitron">
-                    <div className="border-b border-white/5 pb-2 flex justify-between items-center">
-                      <span className="text-[12px] font-bold text-white tracking-widest uppercase">
-                        {editingLog.id ? "EDIT_LOG_ENTRY" : "ADD_LOG_ENTRY"}
+                  <form
+                    onSubmit={handleSaveLog}
+                    className="border border-white/15 bg-[#1b1c1e]/80 p-5 sm:p-6 flex flex-col gap-5"
+                  >
+                    <div className="border-b border-white/10 pb-3 flex justify-between items-center">
+                      <span className="text-[13px] font-orbitron font-bold text-white tracking-wider uppercase">
+                        {editingLog.id
+                          ? "Edit Weekly Log Entry"
+                          : "New Weekly Log Entry"}
                       </span>
                       <button
                         type="button"
                         onClick={() => setEditingLog(null)}
-                        className="text-[10px] text-neutral-500 hover:text-neutral-300 uppercase cursor-pointer"
+                        className="min-h-[36px] px-3 text-[11px] font-mono text-neutral-400 hover:text-white uppercase cursor-pointer"
                       >
-                        [CANCEL]
+                        Cancel
                       </button>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-neutral-500 tracking-wider">WEEK LABEL</label>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-mono text-neutral-300 tracking-wider uppercase">
+                          Week Label
+                        </label>
                         <input
                           type="text"
                           value={editingLog.week || ""}
-                          onChange={(e) => setEditingLog({ ...editingLog, week: e.target.value.toUpperCase() })}
+                          onChange={(e) =>
+                            setEditingLog({
+                              ...editingLog,
+                              week: e.target.value.toUpperCase(),
+                            })
+                          }
                           placeholder="WEEK 01"
-                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none"
+                          className="min-h-[40px] bg-[#121314] border border-white/15 text-white px-3 py-2 text-xs sm:text-sm font-orbitron focus:outline-none focus:border-white/40"
                           required
                         />
                       </div>
-                      <div className="flex flex-col gap-1 sm:col-span-2">
-                        <label className="text-[9px] text-neutral-500 tracking-wider">DATE RANGE</label>
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <label className="text-[10px] font-mono text-neutral-300 tracking-wider uppercase">
+                          Date Range
+                        </label>
                         <input
                           type="text"
                           value={editingLog.dates || ""}
-                          onChange={(e) => setEditingLog({ ...editingLog, dates: e.target.value.toUpperCase() })}
+                          onChange={(e) =>
+                            setEditingLog({
+                              ...editingLog,
+                              dates: e.target.value.toUpperCase(),
+                            })
+                          }
                           placeholder="JUNE 01 - JUNE 05, 2026"
-                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none"
+                          className="min-h-[40px] bg-[#121314] border border-white/15 text-white px-3 py-2 text-xs sm:text-sm font-mono focus:outline-none focus:border-white/40"
                           required
                         />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-neutral-500 tracking-wider">HOURS LOGGED</label>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-mono text-neutral-300 tracking-wider uppercase">
+                          Hours Logged
+                        </label>
                         <input
                           type="text"
                           value={editingLog.hours || ""}
-                          onChange={(e) => setEditingLog({ ...editingLog, hours: e.target.value.toUpperCase() })}
+                          onChange={(e) =>
+                            setEditingLog({
+                              ...editingLog,
+                              hours: e.target.value.toUpperCase(),
+                            })
+                          }
                           placeholder="40 HOURS"
-                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none"
+                          className="min-h-[40px] bg-[#121314] border border-white/15 text-white px-3 py-2 text-xs sm:text-sm font-mono focus:outline-none focus:border-white/40"
                           required
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-neutral-500 tracking-wider">STATUS STATUS</label>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-mono text-neutral-300 tracking-wider uppercase">
+                          Verification Status
+                        </label>
                         <select
                           value={editingLog.status || "APPROVED"}
-                          onChange={(e) => setEditingLog({ ...editingLog, status: e.target.value })}
-                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-2 text-xs focus:outline-none cursor-pointer"
+                          onChange={(e) =>
+                            setEditingLog({
+                              ...editingLog,
+                              status: e.target.value,
+                            })
+                          }
+                          className="min-h-[40px] bg-[#121314] border border-white/15 text-white px-3 py-2 text-xs sm:text-sm font-mono focus:outline-none cursor-pointer"
                         >
                           <option value="APPROVED">APPROVED</option>
                           <option value="SUBMITTED">SUBMITTED</option>
@@ -914,106 +1101,136 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Bullet tasks editor */}
-                    <div className="flex flex-col gap-2.5">
-                      <label className="text-[9px] text-neutral-500 tracking-wider">WEEKLY COMPLETED TASKS (BULLET POINTS)</label>
-                      
-                      <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-3">
+                      <label className="text-[10px] font-mono text-neutral-300 tracking-wider uppercase">
+                        Completed Tasks &amp; Accomplishments
+                      </label>
+
+                      <div className="flex flex-col gap-2.5">
                         {editingLog.tasks?.map((task, idx) => (
                           <div key={idx} className="flex gap-2 items-center">
-                            <span className="text-white/40 font-mono text-xs select-none">&gt;</span>
+                            <span className="text-emerald-400 font-mono text-xs select-none shrink-0">
+                              ▸
+                            </span>
                             <input
                               type="text"
                               value={task}
-                              onChange={(e) => updateLogTask(idx, e.target.value)}
-                              className="flex-grow bg-[#1b1b1b] border border-white/10 text-white px-3 py-1.5 text-xs focus:outline-none font-sans"
+                              onChange={(e) =>
+                                updateLogTask(idx, e.target.value)
+                              }
+                              className="flex-grow min-h-[38px] bg-[#121314] border border-white/15 text-white px-3 py-1.5 text-sm focus:outline-none font-sans"
                               required
                             />
                             <button
                               type="button"
                               onClick={() => removeLogTask(idx)}
-                              className="px-2.5 py-1.5 border border-rose-500/20 hover:bg-rose-500/10 text-rose-500 text-[10px] cursor-pointer"
+                              aria-label={`Remove task ${idx + 1}`}
+                              className="min-h-[38px] px-3 border border-rose-500/30 hover:bg-rose-500/15 text-rose-300 text-xs font-mono cursor-pointer shrink-0"
                             >
-                              X
+                              Remove
                             </button>
                           </div>
                         ))}
                       </div>
 
                       {/* Add task block */}
-                      <div className="flex gap-2 items-center border-t border-white/5 pt-2">
-                        <span className="text-emerald-500/50 font-mono text-xs select-none">+</span>
+                      <div className="flex flex-col sm:flex-row gap-2.5 sm:items-center border-t border-white/10 pt-3">
                         <input
                           type="text"
                           value={newTaskInput}
                           onChange={(e) => setNewTaskInput(e.target.value)}
-                          placeholder="Type a new task accomplished..."
-                          className="flex-grow bg-[#1b1b1b]/60 border border-white/5 text-neutral-300 px-3 py-1.5 text-xs focus:outline-none font-sans"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addLogTask();
+                            }
+                          }}
+                          placeholder="Describe a completed task and press Add..."
+                          className="flex-grow min-h-[40px] bg-[#121314] border border-white/15 text-white px-3.5 py-2 text-sm focus:outline-none font-sans"
                         />
                         <button
                           type="button"
                           onClick={addLogTask}
-                          className="px-4 py-1.5 border border-emerald-500/20 hover:bg-emerald-500/15 text-emerald-400 text-[10px] cursor-pointer"
+                          className="min-h-[40px] px-4 py-2 border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-mono uppercase tracking-wider cursor-pointer shrink-0"
                         >
-                          ADD_TASK
+                          + Add Task
                         </button>
                       </div>
                     </div>
 
-                    <div className="pt-2 flex gap-4">
+                    <div className="pt-2 flex flex-wrap gap-3">
                       <button
                         type="submit"
-                        className="h-[32px] px-6 bg-[#d9d9d9] hover:bg-white text-[#252525] font-bold text-xs tracking-widest uppercase cursor-pointer transition-all active:scale-[0.98]"
+                        className="min-h-[42px] px-6 bg-[#e4e4e7] hover:bg-white text-[#18191b] font-orbitron font-bold text-xs tracking-widest uppercase cursor-pointer transition-colors"
                       >
-                        SAVE_LOG_ENTRY
+                        Save Log Entry
                       </button>
                       <button
                         type="button"
                         onClick={() => setEditingLog(null)}
-                        className="h-[32px] px-6 border border-white/10 text-neutral-400 hover:text-white text-xs tracking-widest uppercase cursor-pointer"
+                        className="min-h-[42px] px-6 border border-white/15 text-neutral-300 hover:text-white text-xs font-mono tracking-widest uppercase cursor-pointer"
                       >
-                        CANCEL
+                        Cancel
                       </button>
                     </div>
                   </form>
                 ) : (
                   <>
-                    {/* Mode: List Logs */}
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-mono text-neutral-500 tracking-wider">
-                        {logs.length} LOGGED WEEKS
+                    <div className="flex flex-wrap justify-between items-center gap-3">
+                      <span className="text-[12px] font-mono text-neutral-400 tracking-wider uppercase">
+                        {logs.length} Recorded Weeks
                       </span>
                       <button
-                        onClick={() => setEditingLog({ week: "", dates: "", hours: "40 HOURS", status: "APPROVED", tasks: [] })}
-                        className="px-4 py-1.5 border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 font-bold font-orbitron tracking-widest text-[10px] uppercase cursor-pointer transition-colors"
+                        type="button"
+                        onClick={() =>
+                          setEditingLog({
+                            week: "",
+                            dates: "",
+                            hours: "40 HOURS",
+                            status: "APPROVED",
+                            tasks: [],
+                          })
+                        }
+                        className="min-h-[40px] px-4 py-2 border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold font-orbitron tracking-widest text-[11px] uppercase cursor-pointer transition-colors"
                       >
-                        + ADD_WEEK_LOG
+                        + Add Week Log
                       </button>
                     </div>
 
-                    <div className="flex flex-col gap-4 max-h-[400px] overflow-y-auto pr-2">
+                    <div className="flex flex-col gap-3.5">
                       {logs.map((entry) => (
-                        <div key={entry.id} className="border border-white/10 bg-neutral-900/10 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 font-orbitron">
+                        <div
+                          key={entry.id}
+                          className="border border-white/15 bg-[#1b1c1e]/60 p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+                        >
                           <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-3">
-                              <span className="text-[13px] font-bold text-white tracking-widest">{entry.week}</span>
-                              <span className="text-[9px] text-neutral-500 font-mono">[{entry.dates}]</span>
+                            <div className="flex flex-wrap items-center gap-2.5">
+                              <span className="text-[14px] font-orbitron font-bold text-white tracking-wider">
+                                {entry.week}
+                              </span>
+                              <span className="text-[11px] text-neutral-400 font-mono">
+                                [{entry.dates}]
+                              </span>
                             </div>
-                            <div className="text-[10px] text-neutral-400 font-mono lowercase">
-                              {entry.hours} • status: {entry.status} • {entry.tasks.length} accomplishments
+                            <div className="text-[12px] text-neutral-300 font-mono">
+                              {entry.hours} • {entry.status} •{" "}
+                              {entry.tasks.length} accomplishments
                             </div>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex items-center gap-2.5 self-end sm:self-auto">
                             <button
+                              type="button"
                               onClick={() => setEditingLog(entry)}
-                              className="px-3 py-1 border border-white/10 hover:bg-white/5 text-neutral-300 hover:text-white text-[10px] cursor-pointer"
+                              className="min-h-[38px] px-3.5 py-1.5 border border-white/15 hover:bg-white/10 text-neutral-200 hover:text-white text-xs font-mono uppercase cursor-pointer"
                             >
-                              EDIT
+                              Edit
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDeleteLog(entry.id)}
-                              className="px-3 py-1 border border-rose-500/20 hover:bg-rose-500/10 text-rose-400 text-[10px] cursor-pointer"
+                              className="min-h-[38px] px-3.5 py-1.5 border border-rose-500/30 hover:bg-rose-500/15 text-rose-300 text-xs font-mono uppercase cursor-pointer"
                             >
-                              DELETE
+                              Delete
                             </button>
                           </div>
                         </div>
@@ -1022,218 +1239,300 @@ export default function AdminDashboard() {
                   </>
                 )}
               </div>
-            )}
+            ) : null}
 
             {/* 3. UPLOADS TAB */}
-            {activeTab === "uploads" && (
+            {activeTab === "uploads" ? (
               <div className="flex flex-col gap-6">
-                <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                  <span className="text-[11px] font-mono text-neutral-500 tracking-wider">
-                    UPLOAD CENTER: ATTACH OJT DOCUMENTS (PDF / IMAGES)
+                <div className="flex flex-wrap justify-between items-center gap-3 border-b border-white/10 pb-3">
+                  <span className="text-[12px] font-mono text-neutral-400 tracking-wider uppercase">
+                    Manage OJT Deliverables (PDF or Images)
                   </span>
-                  
+
                   <button
+                    type="button"
                     onClick={() => setShowAddReqForm(true)}
-                    className="px-3 py-1 border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 font-bold font-orbitron tracking-widest text-[9px] uppercase cursor-pointer"
+                    className="min-h-[40px] px-4 py-2 border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold font-orbitron tracking-widest text-[11px] uppercase cursor-pointer"
                   >
-                    + ADD REQUIREMENT
+                    + Add Requirement
                   </button>
                 </div>
 
                 {/* Add requirement definition form */}
-                {showAddReqForm && (
-                  <form onSubmit={handleAddRequirement} className="border border-emerald-500/10 bg-emerald-500/5 p-4 flex flex-col gap-3 font-orbitron animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="flex justify-between items-center border-b border-emerald-500/10 pb-1">
-                      <span className="text-[10px] font-bold text-emerald-400 uppercase">ADD NEW OJT REQUIREMENT DEFINITION</span>
-                      <button type="button" onClick={() => setShowAddReqForm(false)} className="text-[9px] text-neutral-400 hover:text-white uppercase">[CANCEL]</button>
+                {showAddReqForm ? (
+                  <form
+                    onSubmit={handleAddRequirement}
+                    className="border border-emerald-500/30 bg-[#1b1c1e] p-5 flex flex-col gap-4"
+                  >
+                    <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                      <span className="text-[12px] font-orbitron font-bold text-emerald-300 uppercase">
+                        New Requirement Definition
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddReqForm(false)}
+                        className="min-h-[34px] px-2 text-[11px] font-mono text-neutral-400 hover:text-white uppercase cursor-pointer"
+                      >
+                        Cancel
+                      </button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-neutral-500">REQUIREMENT NAME (E.G. &quot;OFFICIAL RECEIPT&quot;)</label>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-mono text-neutral-300 uppercase">
+                          Requirement Title
+                        </label>
                         <input
                           type="text"
                           value={newReqName}
                           onChange={(e) => {
                             setNewReqName(e.target.value);
                             if (!newReqKey) {
-                              setNewReqKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_"));
+                              setNewReqKey(
+                                e.target.value
+                                  .toLowerCase()
+                                  .replace(/[^a-z0-9_]/g, "_")
+                                  .replace(/_+/g, "_")
+                              );
                             }
                           }}
-                          placeholder="Document Name"
-                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-1.5 text-xs focus:outline-none"
+                          placeholder="e.g. Official Receipt"
+                          className="min-h-[40px] bg-[#121314] border border-white/15 text-white px-3.5 py-2 text-sm focus:outline-none"
                           required
                         />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-neutral-500">SYSTEM KEY (E.G. &quot;official_receipt&quot;)</label>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-mono text-neutral-300 uppercase">
+                          Document Key
+                        </label>
                         <input
                           type="text"
                           value={newReqKey}
-                          onChange={(e) => setNewReqKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
-                          placeholder="sys_key"
-                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-1.5 text-xs focus:outline-none"
+                          onChange={(e) =>
+                            setNewReqKey(
+                              e.target.value
+                                .toLowerCase()
+                                .replace(/[^a-z0-9_]/g, "_")
+                            )
+                          }
+                          placeholder="official_receipt"
+                          className="min-h-[40px] bg-[#121314] border border-white/15 text-white px-3.5 py-2 text-sm font-mono focus:outline-none"
                           required
                         />
                       </div>
                     </div>
-                    <button type="submit" className="h-[28px] self-start px-4 bg-emerald-400 text-[#252525] font-bold text-[10px] tracking-wider uppercase cursor-pointer">
-                      SAVE_DEFINITION
+                    <button
+                      type="submit"
+                      className="min-h-[40px] self-start px-5 bg-emerald-400 hover:bg-emerald-300 text-[#18191b] font-orbitron font-bold text-xs tracking-wider uppercase cursor-pointer"
+                    >
+                      Save Requirement
                     </button>
                   </form>
-                )}
+                ) : null}
 
-                {/* Edit Name / Rename Form */}
-                {editingReqKey && (
-                  <form onSubmit={handleRenameRequirement} className="border border-white/15 bg-neutral-900/40 p-4 flex flex-col gap-3 font-orbitron animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="flex justify-between items-center border-b border-white/10 pb-1">
-                      <span className="text-[10px] font-bold text-white uppercase">RENAME REQUIREMENT</span>
-                      <button type="button" onClick={() => { setEditingReqKey(null); setEditingReqName(""); }} className="text-[9px] text-neutral-400 hover:text-white uppercase">[CANCEL]</button>
+                {/* Rename Form */}
+                {editingReqKey ? (
+                  <form
+                    onSubmit={handleRenameRequirement}
+                    className="border border-white/25 bg-[#1b1c1e] p-5 flex flex-col gap-4"
+                  >
+                    <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                      <span className="text-[12px] font-orbitron font-bold text-white uppercase">
+                        Rename Requirement ({editingReqKey})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingReqKey(null);
+                          setEditingReqName("");
+                        }}
+                        className="min-h-[34px] px-2 text-[11px] font-mono text-neutral-400 hover:text-white uppercase cursor-pointer"
+                      >
+                        Cancel
+                      </button>
                     </div>
-                    <div className="flex gap-3 items-end">
-                      <div className="flex-grow flex flex-col gap-1">
-                        <label className="text-[9px] text-neutral-500 font-mono">EDITING NAME FOR KEY: &quot;{editingReqKey}&quot;</label>
+                    <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                      <div className="flex-grow flex flex-col gap-1.5">
+                        <label className="text-[10px] font-mono text-neutral-400 uppercase">
+                          Display Name
+                        </label>
                         <input
                           type="text"
                           value={editingReqName}
                           onChange={(e) => setEditingReqName(e.target.value)}
-                          className="bg-[#1b1b1b] border border-white/10 text-white px-3 py-1.5 text-xs focus:outline-none"
+                          className="min-h-[40px] bg-[#121314] border border-white/15 text-white px-3.5 py-2 text-sm focus:outline-none"
                           required
                         />
                       </div>
-                      <button type="submit" className="h-[32px] px-4 bg-[#d9d9d9] hover:bg-white text-[#252525] font-bold text-[10px] tracking-wider uppercase cursor-pointer">
-                        RENAME_FILE
+                      <button
+                        type="submit"
+                        className="min-h-[40px] px-5 bg-[#e4e4e7] hover:bg-white text-[#18191b] font-orbitron font-bold text-xs tracking-wider uppercase cursor-pointer"
+                      >
+                        Save Name
                       </button>
                     </div>
                   </form>
-                )}
+                ) : null}
 
-                {/* Requirements list */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 select-none font-orbitron">
+                {/* Requirements Grid (Natural Flow) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {requirements.map((req) => {
-                    const isUploaded = req.href && req.href !== "#";
+                    const isUploaded = Boolean(req.href && req.href !== "#");
                     return (
-                      <div 
+                      <div
                         key={req.key}
-                        className={`p-4 border flex flex-col gap-3 transition-colors ${
-                          isUploaded ? "border-emerald-500/15 bg-emerald-500/5" : "border-white/10 bg-neutral-900/10"
+                        className={`p-4 sm:p-5 border flex flex-col justify-between gap-4 transition-colors ${
+                          isUploaded
+                            ? "border-emerald-500/30 bg-emerald-500/[0.06]"
+                            : "border-white/15 bg-[#1b1c1e]/55"
                         }`}
                       >
                         <div className="flex justify-between items-start gap-3">
-                          <div className="flex flex-col">
-                            <span className={`text-[12px] font-bold tracking-wider uppercase ${
-                              isUploaded ? "text-emerald-400" : "text-neutral-300"
-                            }`}>
+                          <div className="flex flex-col min-w-0">
+                            <span
+                              className={`text-[14px] font-orbitron font-bold tracking-wide uppercase break-words ${
+                                isUploaded ? "text-emerald-300" : "text-white"
+                              }`}
+                            >
                               {req.name}
                             </span>
-                            <span className="text-[9px] font-mono text-neutral-500 mt-0.5 lowercase">
-                              key: {req.key} {req.submissionDate ? `• uploaded: ${req.submissionDate}` : ""}
+                            <span className="text-[11px] font-mono text-neutral-400 mt-1">
+                              {req.key}
+                              {req.submissionDate
+                                ? ` • Filed ${req.submissionDate}`
+                                : ""}
                             </span>
                           </div>
-                          
-                          <div className="flex items-center gap-2 select-none">
-                            <button
-                              onClick={() => { setEditingReqKey(req.key); setEditingReqName(req.name); }}
-                              className="text-[9px] text-neutral-500 hover:text-white uppercase transition-colors"
-                              title="Rename requirement"
-                            >
-                              [RENAME]
-                            </button>
-                            <button
-                              onClick={() => handleDeleteRequirementDefinition(req.key)}
-                              className="text-[9px] text-rose-500/60 hover:text-rose-400 uppercase transition-colors"
-                              title="Delete requirement definition"
-                            >
-                              [DELETE]
-                            </button>
-                            <span className={`text-[9px] font-mono px-1.5 py-0.5 border ${
-                              isUploaded 
-                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" 
-                                : "border-amber-500/20 bg-amber-500/10 text-amber-400"
-                            }`}>
-                              {isUploaded ? "ACTIVE" : "MISSING"}
-                            </span>
-                          </div>
+
+                          <span
+                            className={`text-[10px] font-mono px-2 py-0.5 border shrink-0 uppercase ${
+                              isUploaded
+                                ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-300"
+                                : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                            }`}
+                          >
+                            {isUploaded ? "FILED" : "MISSING"}
+                          </span>
                         </div>
 
-                        {/* Upload action controls */}
-                        <div className="flex items-center gap-3 border-t border-white/5 pt-3">
-                          {isUploaded ? (
-                            <>
-                              <button 
-                                type="button"
-                                onClick={() => {
-                                  const filename = req.href.split("/").pop();
-                                  const viewUrl = req.href.startsWith("/api/view/") ? req.href : `/api/view/${filename}`;
-                                  setActivePreviewUrl(viewUrl);
-                                }}
-                                className="px-3 py-1 border border-white/10 hover:bg-white/5 text-neutral-300 hover:text-white text-[10px] tracking-wider uppercase cursor-pointer transition-colors"
-                              >
-                                VIEW_FILE
-                              </button>
-                              <button
-                                onClick={() => handleDeleteFile(req.key)}
-                                className="px-3 py-1 border border-rose-500/25 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 text-[10px] tracking-wider uppercase cursor-pointer transition-colors"
-                              >
-                                REMOVE
-                              </button>
-                            </>
-                          ) : (
-                            <label className="px-3 py-1 border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 text-[10px] tracking-wider uppercase cursor-pointer transition-colors">
-                              CHOOSE & UPLOAD
-                              <input 
-                                type="file"
-                                accept=".pdf,.docx,.png,.jpg,.jpeg"
-                                onChange={(e) => handleFileUpload(req.key, e)}
-                                className="hidden"
-                              />
-                            </label>
-                          )}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {isUploaded ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const filename = req.href.split("/").pop();
+                                    const viewUrl = req.href.startsWith(
+                                      "/api/view/"
+                                    )
+                                      ? req.href
+                                      : `/api/view/${filename}`;
+                                    setActivePreviewUrl(viewUrl);
+                                  }}
+                                  className="min-h-[36px] px-3 py-1.5 border border-white/20 hover:bg-white/10 text-white text-[11px] font-mono tracking-wider uppercase cursor-pointer transition-colors"
+                                >
+                                  Preview
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteFile(req.key)}
+                                  className="min-h-[36px] px-3 py-1.5 border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-[11px] font-mono tracking-wider uppercase cursor-pointer transition-colors"
+                                >
+                                  Remove File
+                                </button>
+                              </>
+                            ) : (
+                              <label className="min-h-[36px] px-3.5 py-1.5 border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-[11px] font-mono tracking-wider uppercase cursor-pointer transition-colors inline-flex items-center">
+                                Upload File
+                                <input
+                                  type="file"
+                                  accept=".pdf,.docx,.png,.jpg,.jpeg"
+                                  onChange={(e) =>
+                                    handleFileUpload(req.key, e)
+                                  }
+                                  className="hidden"
+                                />
+                              </label>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingReqKey(req.key);
+                                setEditingReqName(req.name);
+                              }}
+                              className="min-h-[34px] px-2.5 text-[11px] font-mono text-neutral-400 hover:text-white uppercase transition-colors cursor-pointer"
+                            >
+                              Rename
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteRequirementDefinition(req.key)
+                              }
+                              className="min-h-[34px] px-2.5 text-[11px] font-mono text-rose-400/80 hover:text-rose-300 uppercase transition-colors cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
-            )}
+            ) : null}
           </>
         )}
       </div>
 
       {/* Embedded Document Viewer Modal */}
-      {activePreviewUrl && (
-        <div className="fixed inset-0 z-50 bg-[#151515]/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 font-orbitron">
-          <div className="w-full max-w-5xl h-[85vh] border border-white/20 bg-[#1e1e1e] flex flex-col">
+      {activePreviewUrl ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setActivePreviewUrl(null)}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-0 sm:p-6"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-5xl h-dvh sm:h-[88vh] border-0 sm:border border-white/25 bg-[#1b1c1e] flex flex-col"
+          >
             {/* Modal Header */}
-            <div className="flex justify-between items-center border-b border-white/10 px-6 py-4 bg-neutral-900/40">
-              <div className="flex flex-col">
-                <span className="text-[9px] text-neutral-500 font-mono tracking-widest uppercase">
-                  SYS_PREVIEW_UTILITY
+            <div className="flex flex-wrap justify-between items-center gap-3 border-b border-white/15 px-4 py-3.5 sm:px-6 sm:py-4 bg-[#252525]">
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] text-neutral-400 font-mono tracking-widest uppercase">
+                  DOCUMENT PREVIEW
                 </span>
-                <span className="text-[13px] font-bold tracking-wider text-white truncate max-w-[200px] sm:max-w-lg">
+                <span className="text-[13px] font-orbitron font-bold tracking-wider text-white truncate max-w-[200px] sm:max-w-lg">
                   {activePreviewUrl.split("/").pop()}
                 </span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <a
                   href={activePreviewUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-3 py-1.5 border border-white/15 hover:bg-white/5 text-neutral-300 hover:text-white text-[10px] tracking-widest uppercase transition-colors"
+                  className="min-h-[38px] px-3.5 py-2 border border-white/20 hover:bg-white/10 text-neutral-200 hover:text-white text-[11px] font-mono tracking-wider uppercase inline-flex items-center transition-colors"
                 >
-                  NEW_TAB
+                  Open in New Tab ↗
                 </a>
                 <button
+                  type="button"
                   onClick={() => setActivePreviewUrl(null)}
-                  className="px-3 py-1.5 border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 text-[10px] tracking-widest uppercase cursor-pointer transition-colors"
+                  className="min-h-[38px] px-3.5 py-2 border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-[11px] font-mono font-semibold tracking-wider uppercase inline-flex items-center cursor-pointer transition-colors"
                 >
-                  CLOSE [X]
+                  Close [ESC]
                 </button>
               </div>
             </div>
 
-            {/* Modal Body / Embedded File */}
-            <div className="flex-grow bg-neutral-950/70 p-2 sm:p-4 flex items-center justify-center overflow-hidden">
-              {activePreviewUrl.includes(".pdf") || activePreviewUrl.includes("/api/view/") ? (
+            {/* Modal Body */}
+            <div className="flex-grow bg-[#121314] p-2 sm:p-4 flex items-center justify-center overflow-hidden">
+              {activePreviewUrl.includes(".pdf") ||
+              activePreviewUrl.includes("/api/view/") ? (
                 <object
                   data={activePreviewUrl}
                   type="application/pdf"
@@ -1254,24 +1553,26 @@ export default function AdminDashboard() {
                 />
               ) : (
                 <div className="text-center p-6 flex flex-col gap-4 max-w-md">
-                  <div className="text-rose-500 font-mono text-lg">[!] NO_PREVIEW_AVAILABLE</div>
-                  <p className="text-xs text-neutral-400 leading-relaxed font-sans">
-                    This file format does not support inline rendering. Use the button above to open or download the file.
+                  <div className="text-amber-400 font-orbitron font-bold text-base uppercase">
+                    Inline Preview Unavailable
+                  </div>
+                  <p className="text-sm text-neutral-300 leading-relaxed font-sans">
+                    This file format does not support inline browser rendering.
+                    Download the file to view it locally.
                   </p>
                   <a
                     href={activePreviewUrl}
                     download
-                    className="self-center px-6 py-2 bg-[#d9d9d9] hover:bg-white text-[#252525] font-bold text-xs tracking-widest uppercase transition-all"
+                    className="min-h-[42px] self-center px-6 py-2.5 bg-[#e4e4e7] hover:bg-white text-[#18191b] font-orbitron font-bold text-xs tracking-widest uppercase inline-flex items-center transition-colors"
                   >
-                    DOWNLOAD_FILE
+                    Download File
                   </a>
                 </div>
               )}
             </div>
           </div>
         </div>
-      )}
-      
+      ) : null}
     </div>
   );
 }
