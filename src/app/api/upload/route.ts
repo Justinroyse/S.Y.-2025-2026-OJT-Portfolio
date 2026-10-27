@@ -3,7 +3,11 @@ import { cookies } from "next/headers";
 import fs from "fs/promises";
 import path from "path";
 import { readData, writeData } from "@/lib/db";
-import { commitFileToGitHub, deleteFileFromGitHub, isGitHubConfigured } from "@/lib/github";
+import {
+  commitFileToGitHub,
+  deleteFileFromGitHub,
+  isGitHubConfigured,
+} from "@/lib/github";
 
 async function isAuthenticated() {
   const cookieStore = await cookies();
@@ -23,6 +27,17 @@ interface HTEData {
   designation: string;
   details: string;
   logoUrl: string;
+}
+
+interface AboutData {
+  name: string;
+  course: string;
+  studentId: string;
+  avatarUrl?: string;
+  biography: string;
+  objective: string;
+  contactInfo: { label: string; value: string; href: string }[];
+  skillSet: string[];
 }
 
 /**
@@ -47,6 +62,9 @@ async function deleteFileFromStorage(currentUrl: string, key?: string) {
     }
   } else if (currentUrl.startsWith("/uploads/")) {
     relativePath = `public${currentUrl}`;
+  } else if (currentUrl.startsWith("/api/view/")) {
+    const filename = currentUrl.split("/").pop();
+    if (filename) relativePath = `public/uploads/${filename}`;
   }
 
   if (relativePath && isGitHubConfigured()) {
@@ -62,7 +80,9 @@ async function deleteFileFromStorage(currentUrl: string, key?: string) {
 
   // Also remove from local filesystem if present
   try {
-    const filename = relativePath ? path.basename(relativePath) : currentUrl.split("/").pop();
+    const filename = relativePath
+      ? path.basename(relativePath)
+      : currentUrl.split("/").pop();
     if (filename) {
       const localPath = path.join(process.cwd(), "public", "uploads", filename);
       await fs.unlink(localPath);
@@ -83,10 +103,15 @@ export async function POST(req: NextRequest) {
     const reqKey = formData.get("key") as string | null;
 
     if (!file || !reqKey) {
-      return NextResponse.json({ error: "Missing file or requirement key" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing file or requirement key" },
+        { status: 400 }
+      );
     }
 
-    const isRequirement = reqKey !== "hte_logo";
+    const isHteLogo = reqKey === "hte_logo";
+    const isProfilePhoto = reqKey === "profile_photo";
+    const isRequirement = !isHteLogo && !isProfilePhoto;
     let requirements: RequirementItem[] = [];
     let itemIndex = -1;
 
@@ -95,7 +120,10 @@ export async function POST(req: NextRequest) {
       itemIndex = requirements.findIndex((r) => r.key === reqKey);
 
       if (itemIndex === -1) {
-        return NextResponse.json({ error: "Requirement key not found" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Requirement key not found" },
+          { status: 400 }
+        );
       }
     }
 
@@ -141,16 +169,20 @@ export async function POST(req: NextRequest) {
       };
 
       await writeData("requirements.json", requirements);
-    } else {
-      // HTE Logo update
+    } else if (isHteLogo) {
       const hte = await readData<HTEData>("hte.json");
       hte.logoUrl = fileUrl;
       await writeData("hte.json", hte);
+    } else if (isProfilePhoto) {
+      const about = await readData<AboutData>("about.json");
+      about.avatarUrl = fileUrl;
+      await writeData("about.json", about);
     }
 
     return NextResponse.json({ success: true, url: fileUrl });
   } catch (error: unknown) {
-    const errMessage = error instanceof Error ? error.message : "Upload processing failed";
+    const errMessage =
+      error instanceof Error ? error.message : "Upload processing failed";
     console.error("Upload error:", error);
     return NextResponse.json({ error: errMessage }, { status: 500 });
   }
@@ -168,20 +200,25 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Missing key" }, { status: 400 });
     }
 
-    const isRequirement = key !== "hte_logo";
+    const isHteLogo = key === "hte_logo";
+    const isProfilePhoto = key === "profile_photo";
+    const isRequirement = !isHteLogo && !isProfilePhoto;
 
     if (isRequirement) {
-      const requirements = await readData<RequirementItem[]>("requirements.json");
+      const requirements =
+        await readData<RequirementItem[]>("requirements.json");
       const idx = requirements.findIndex((r) => r.key === key);
 
       if (idx === -1) {
-        return NextResponse.json({ error: "Requirement key not found" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Requirement key not found" },
+          { status: 400 }
+        );
       }
 
       const currentUrl = requirements[idx].href;
       await deleteFileFromStorage(currentUrl, key);
 
-      // Reset requirement item in metadata
       requirements[idx] = {
         ...requirements[idx],
         href: "#",
@@ -189,19 +226,28 @@ export async function DELETE(req: NextRequest) {
       };
 
       await writeData("requirements.json", requirements);
-    } else {
-      // HTE logo deletion
-      if (url) {
-        await deleteFileFromStorage(url, key);
-      }
+    } else if (isHteLogo) {
       const hte = await readData<HTEData>("hte.json");
+      const targetUrl = url || hte.logoUrl;
+      if (targetUrl) {
+        await deleteFileFromStorage(targetUrl, key);
+      }
       hte.logoUrl = "";
       await writeData("hte.json", hte);
+    } else if (isProfilePhoto) {
+      const about = await readData<AboutData>("about.json");
+      const targetUrl = url || about.avatarUrl;
+      if (targetUrl) {
+        await deleteFileFromStorage(targetUrl, key);
+      }
+      about.avatarUrl = "";
+      await writeData("about.json", about);
     }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    const errMessage = error instanceof Error ? error.message : "File deletion failed";
+    const errMessage =
+      error instanceof Error ? error.message : "File deletion failed";
     console.error("Delete error:", error);
     return NextResponse.json({ error: errMessage }, { status: 500 });
   }

@@ -38,6 +38,7 @@ interface AboutSummary {
   name: string;
   course: string;
   studentId: string;
+  avatarUrl?: string;
 }
 
 interface LogSummary {
@@ -82,6 +83,7 @@ export default async function RootLayout({
             name: about.name,
             course: about.course,
             studentId: about.studentId,
+            avatarUrl: about.avatarUrl || "",
             totalHours,
             targetHours: 300,
             submittedDocs,

@@ -11,6 +11,7 @@ interface AboutData {
   name: string;
   course: string;
   studentId: string;
+  avatarUrl?: string;
   biography: string;
   objective: string;
   contactInfo: ContactItem[];
@@ -28,6 +29,13 @@ export default async function About() {
     readData<AboutData>("about.json"),
     readData<HTEData>("hte.json"),
   ]);
+
+  const initials = data.name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 
   return (
     <div className="flex flex-col gap-8 sm:gap-10 w-full">
@@ -47,16 +55,52 @@ export default async function About() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
-        {/* Left Column: Biography, Objectives, HTE Assignment (7 cols) */}
+        {/* Left Column: Portrait + Biography, Objectives, HTE Assignment (7 cols) */}
         <div className="lg:col-span-7 flex flex-col gap-8">
-          {/* Biography */}
-          <section className="border border-white/15 bg-[#1b1c1e]/60 p-5 sm:p-6 flex flex-col gap-3">
-            <h3 className="text-[12px] font-orbitron font-bold text-white tracking-[0.18em] uppercase">
-              Engineering Biography
-            </h3>
-            <p className="text-[14px] sm:text-[15px] text-neutral-200 leading-[1.75] max-w-[65ch]">
-              {data.biography}
-            </p>
+          {/* Student Identity & Engineering Biography */}
+          <section className="border border-white/15 bg-[#1b1c1e]/60 p-5 sm:p-6 flex flex-col gap-5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-b border-white/10 pb-4">
+              <div className="relative w-20 h-20 border border-white/30 bg-[#121314] flex items-center justify-center overflow-hidden shrink-0 select-none">
+                <span className="absolute top-0 left-0 w-1.5 h-1.5 border-t border-l border-white/70 pointer-events-none z-10" />
+                <span className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-white/70 pointer-events-none z-10" />
+                <span className="absolute bottom-0 left-0 w-1.5 h-1.5 border-b border-l border-white/70 pointer-events-none z-10" />
+                <span className="absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r border-white/70 pointer-events-none z-10" />
+
+                {data.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={data.avatarUrl}
+                    alt={data.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-[16px] font-orbitron font-bold text-white/80 tracking-widest">
+                    {initials || "JS"}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-mono text-emerald-400 tracking-[0.18em] uppercase">
+                  COMPUTER ENGINEERING STUDENT
+                </span>
+                <h3 className="text-[16px] sm:text-[18px] font-orbitron font-bold text-white tracking-wider uppercase">
+                  {data.name}
+                </h3>
+                <span className="text-[11px] font-mono text-neutral-400 tracking-wider uppercase">
+                  {data.course} • {data.studentId}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              <h4 className="text-[11px] font-orbitron font-bold text-neutral-300 tracking-[0.18em] uppercase">
+                Engineering Biography
+              </h4>
+              <p className="text-[14px] sm:text-[15px] text-neutral-200 leading-[1.75] max-w-[65ch]">
+                {data.biography}
+              </p>
+            </div>
           </section>
 
           {/* Internship Objectives */}

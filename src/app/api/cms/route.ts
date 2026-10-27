@@ -19,6 +19,7 @@ interface AboutData {
   name: string;
   course: string;
   studentId: string;
+  avatarUrl?: string;
   biography: string;
   objective: string;
   contactInfo: ContactItem[];
@@ -62,7 +63,8 @@ export async function GET() {
     ]);
     return NextResponse.json({ about, logs, requirements, hte });
   } catch (error: unknown) {
-    const errMessage = error instanceof Error ? error.message : "Failed to load databases";
+    const errMessage =
+      error instanceof Error ? error.message : "Failed to load databases";
     console.error(error);
     return NextResponse.json({ error: errMessage }, { status: 500 });
   }
@@ -95,7 +97,8 @@ export async function POST(req: NextRequest) {
       const logs = await readData<LogEntry[]>("logs.json");
       const newLog: LogEntry = {
         id: Date.now().toString(),
-        week: payload.week || `WEEK ${String(logs.length + 1).padStart(2, "0")}`,
+        week:
+          payload.week || `WEEK ${String(logs.length + 1).padStart(2, "0")}`,
         dates: payload.dates || "",
         hours: payload.hours || "40 HOURS",
         status: payload.status || "APPROVED",
@@ -110,7 +113,10 @@ export async function POST(req: NextRequest) {
       const logs = await readData<LogEntry[]>("logs.json");
       const idx = logs.findIndex((l) => String(l.id) === String(payload.id));
       if (idx === -1) {
-        return NextResponse.json({ error: "Log entry not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Log entry not found" },
+          { status: 404 }
+        );
       }
       logs[idx] = {
         ...logs[idx],
@@ -139,7 +145,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error: unknown) {
-    const errMessage = error instanceof Error ? error.message : "Operation failed";
+    const errMessage =
+      error instanceof Error ? error.message : "Operation failed";
     console.error(error);
     return NextResponse.json({ error: errMessage }, { status: 500 });
   }

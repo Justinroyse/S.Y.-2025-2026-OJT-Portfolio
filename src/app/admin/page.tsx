@@ -13,6 +13,7 @@ interface AboutData {
   name: string;
   course: string;
   studentId: string;
+  avatarUrl?: string;
   biography: string;
   objective: string;
   contactInfo: ContactItem[];
@@ -204,6 +205,51 @@ export default function AdminDashboard() {
       }
     } catch {
       showStatus("Server error while saving profile.", "error");
+    }
+  }
+
+  // Handle Profile Photo Upload
+  async function handleProfilePhotoUpload(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("key", "profile_photo");
+
+    showStatus("Uploading profile picture...");
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (aboutData) {
+          const updatedAbout = { ...aboutData, avatarUrl: data.url };
+          setAboutData(updatedAbout);
+
+          await fetch("/api/cms", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "update-about",
+              payload: updatedAbout,
+            }),
+          });
+        }
+        showStatus("Profile picture uploaded and saved.");
+        router.refresh();
+      } else {
+        const err = await res.json();
+        showStatus(err.error || "Profile picture upload failed.", "error");
+      }
+    } catch {
+      showStatus("Network error during profile photo upload.", "error");
     }
   }
 
@@ -698,6 +744,100 @@ export default function AdminDashboard() {
                 onSubmit={handleSaveProfile}
                 className="flex flex-col gap-6 border border-white/15 bg-[#1b1c1e]/60 p-5 sm:p-6"
               >
+                {/* Profile Picture Upload Block */}
+                <div className="flex flex-col gap-3 border-b border-white/10 pb-6">
+                  <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">
+                    Student Profile Picture
+                  </label>
+                  <div className="border border-white/10 bg-[#121314]/60 p-4 flex flex-col sm:flex-row items-center gap-6">
+                    <div className="relative w-[100px] h-[100px] border border-white/25 bg-[#18191b] flex items-center justify-center overflow-hidden select-none shrink-0">
+                      <span className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white/70 pointer-events-none z-10" />
+                      <span className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white/70 pointer-events-none z-10" />
+                      <span className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white/70 pointer-events-none z-10" />
+                      <span className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white/70 pointer-events-none z-10" />
+
+                      {aboutData.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={aboutData.avatarUrl}
+                          alt="Profile picture preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-[10px] text-neutral-500 font-mono">
+                          NO PHOTO
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-2.5 text-center sm:text-left">
+                      <p className="text-xs text-neutral-400 font-sans">
+                        Displayed in the sidebar title block and on your About
+                        profile page. Square portrait images (JPG, PNG, WebP)
+                        work best.
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                        <label className="min-h-[40px] px-4 py-2 border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-mono tracking-wider uppercase cursor-pointer transition-colors inline-flex items-center">
+                          Upload Profile Photo
+                          <input
+                            type="file"
+                            accept=".png,.jpg,.jpeg,.webp"
+                            onChange={handleProfilePhotoUpload}
+                            className="hidden"
+                          />
+                        </label>
+                        {aboutData.avatarUrl ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!confirm("Remove current profile picture?"))
+                                return;
+                              try {
+                                await fetch("/api/upload", {
+                                  method: "DELETE",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    key: "profile_photo",
+                                    url: aboutData.avatarUrl,
+                                  }),
+                                });
+                                const updatedAbout = {
+                                  ...aboutData,
+                                  avatarUrl: "",
+                                };
+                                setAboutData(updatedAbout);
+
+                                await fetch("/api/cms", {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    action: "update-about",
+                                    payload: updatedAbout,
+                                  }),
+                                });
+                                showStatus("Profile picture removed.");
+                                router.refresh();
+                              } catch {
+                                showStatus(
+                                  "Could not remove profile picture.",
+                                  "error"
+                                );
+                              }
+                            }}
+                            className="min-h-[40px] px-4 py-2 border border-rose-500/30 hover:bg-rose-500/15 text-rose-300 text-xs font-mono tracking-wider uppercase cursor-pointer transition-colors"
+                          >
+                            Remove Photo
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-mono text-neutral-300 tracking-wider uppercase">

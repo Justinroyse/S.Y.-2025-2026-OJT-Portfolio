@@ -8,6 +8,7 @@ export interface ProfileSummary {
   name: string;
   course: string;
   studentId: string;
+  avatarUrl?: string;
   totalHours: number;
   targetHours: number;
   submittedDocs: number;
@@ -23,6 +24,7 @@ const DEFAULT_PROFILE: ProfileSummary = {
   name: "Justin Royse L. Solomon",
   course: "BSCpE 2-6",
   studentId: "2024-02548-mn-0",
+  avatarUrl: "",
   totalHours: 240,
   targetHours: 300,
   submittedDocs: 1,
@@ -38,6 +40,14 @@ export default function AppLayout({
     Math.round((profile.totalHours / Math.max(1, profile.targetHours)) * 100)
   );
 
+  // Compute initials fallback for avatar frame
+  const initials = profile.name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
   return (
     <div className="min-h-screen w-full bg-[#252525] text-[#f4f4f6] selection:bg-white selection:text-[#252525] tech-grid">
       {/* Single Unified Responsive Blueprint Grid */}
@@ -52,13 +62,30 @@ export default function AppLayout({
 
         {/* ROW 1, CELL 2: Quick Section Selector / Dossier Switcher */}
         <div className="border-b lg:border-r border-white/15 bg-[#1b1c1e]/85 lg:bg-[#252525]/60 backdrop-blur-md px-4 py-2.5 sm:px-6 lg:px-6 flex items-center justify-between lg:justify-center gap-3">
-          <div className="flex flex-col lg:hidden min-w-0">
-            <span className="text-[12px] sm:text-[13px] font-orbitron font-bold tracking-wider text-white uppercase truncate">
-              {profile.name}
-            </span>
-            <span className="text-[10px] font-mono text-neutral-400 tracking-wider">
-              {profile.course} • {profile.studentId}
-            </span>
+          {/* Mobile/Tablet Identity Header with Profile Thumbnail */}
+          <div className="flex items-center gap-3 lg:hidden min-w-0">
+            <div className="w-10 h-10 border border-white/25 bg-[#121314] flex items-center justify-center overflow-hidden shrink-0">
+              {profile.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile.name}
+                  className="w-full h-full object-cover select-none"
+                />
+              ) : (
+                <span className="text-[11px] font-orbitron font-bold text-neutral-400">
+                  {initials || "JS"}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[12px] sm:text-[13px] font-orbitron font-bold tracking-wider text-white uppercase truncate">
+                {profile.name}
+              </span>
+              <span className="text-[10px] font-mono text-neutral-400 tracking-wider truncate">
+                {profile.course} • {profile.studentId}
+              </span>
+            </div>
           </div>
           <DropdownSelector />
         </div>
@@ -84,21 +111,49 @@ export default function AppLayout({
         <aside className="border-b lg:border-r border-white/15 bg-[#1b1c1e]/35 lg:bg-[#252525]/35 px-4 py-3.5 sm:px-8 sm:py-4 lg:p-8 xl:p-10 flex flex-col justify-between">
           {/* Desktop Full Title Block + Sticky Anchor */}
           <div className="lg:sticky lg:top-8 flex flex-col gap-6">
-            {/* Desktop Identity Header */}
-            <div className="hidden lg:flex flex-col gap-2">
-              <span className="text-[10px] font-mono text-neutral-400 tracking-[0.2em] uppercase">
-                STUDENT ENGINEER
-              </span>
-              <h1 className="text-[20px] xl:text-[22px] font-orbitron font-bold leading-snug text-white tracking-wider uppercase">
-                {profile.name}
-              </h1>
-              <div className="flex items-center gap-2.5 pt-1">
-                <span className="px-2 py-0.5 bg-white/8 border border-white/15 text-[11px] font-orbitron font-semibold text-neutral-200 tracking-widest uppercase">
-                  {profile.course}
+            {/* Desktop Identity Header + Framed Profile Portrait */}
+            <div className="hidden lg:flex flex-col gap-4">
+              {/* Profile Portrait Frame */}
+              <div className="relative w-24 h-24 xl:w-28 xl:h-28 border border-white/30 bg-[#1b1c1e] flex items-center justify-center overflow-hidden select-none">
+                <span className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white/70 pointer-events-none z-10" />
+                <span className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white/70 pointer-events-none z-10" />
+                <span className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white/70 pointer-events-none z-10" />
+                <span className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white/70 pointer-events-none z-10" />
+
+                {profile.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={profile.avatarUrl}
+                    alt={`${profile.name} Profile Portrait`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center p-2">
+                    <span className="text-[18px] font-orbitron font-bold text-white/80 tracking-widest">
+                      {initials || "JS"}
+                    </span>
+                    <span className="text-[8px] font-mono text-neutral-500 tracking-widest uppercase mt-0.5">
+                      ID_PORTRAIT
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-mono text-neutral-400 tracking-[0.16em] uppercase">
+                  COMPUTER ENGINEERING STUDENT
                 </span>
-                <span className="text-[11px] font-mono text-neutral-400 tracking-wider uppercase">
-                  {profile.studentId}
-                </span>
+                <h1 className="text-[20px] xl:text-[22px] font-orbitron font-bold leading-snug text-white tracking-wider uppercase">
+                  {profile.name}
+                </h1>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="px-2 py-0.5 bg-white/8 border border-white/15 text-[11px] font-orbitron font-semibold text-neutral-200 tracking-widest uppercase">
+                    {profile.course}
+                  </span>
+                  <span className="text-[11px] font-mono text-neutral-400 tracking-wider uppercase">
+                    {profile.studentId}
+                  </span>
+                </div>
               </div>
             </div>
 
