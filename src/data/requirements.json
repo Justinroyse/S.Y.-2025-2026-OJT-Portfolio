@@ -41,9 +41,8 @@
   },
   {
     "key": "resume",
-    "href": "https://ricdvgwvgsemjvyanftq.supabase.co/storage/v1/object/public/uploads/resume.pdf",
-    "name": "Resume / CV",
-    "submissionDate": "Jul 16, 2026"
+    "href": "#",
+    "name": "Resume / CV"
   },
   {
     "key": "medical_cert",
