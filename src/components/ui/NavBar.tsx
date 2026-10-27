@@ -43,6 +43,7 @@ export default function NavBar() {
 
       <Link
         href="/admin"
+        prefetch={false}
         className={`text-[10px] tracking-[0.25em] font-mono px-2.5 py-1 border transition-all duration-200 uppercase cursor-pointer ${
           pathname.startsWith("/admin")
             ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400 font-bold"
