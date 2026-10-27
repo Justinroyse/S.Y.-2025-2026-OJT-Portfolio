@@ -41,8 +41,9 @@
   },
   {
     "key": "resume",
-    "href": "#",
-    "name": "Resume / CV"
+    "href": "/api/view/resume.pdf",
+    "name": "Resume / CV",
+    "submissionDate": "Oct 27, 2026"
   },
   {
     "key": "medical_cert",
