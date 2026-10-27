@@ -1,8 +1,6 @@
 import React from "react";
 import { readData } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-
 interface LogEntry {
   id: string;
   week: string;

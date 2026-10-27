@@ -1049,7 +1049,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-neutral-500">REQUIREMENT NAME (E.G. "OFFICIAL RECEIPT")</label>
+                        <label className="text-[9px] text-neutral-500">REQUIREMENT NAME (E.G. &quot;OFFICIAL RECEIPT&quot;)</label>
                         <input
                           type="text"
                           value={newReqName}
@@ -1065,7 +1065,7 @@ export default function AdminDashboard() {
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-[9px] text-neutral-500">SYSTEM KEY (E.G. "official_receipt")</label>
+                        <label className="text-[9px] text-neutral-500">SYSTEM KEY (E.G. &quot;official_receipt&quot;)</label>
                         <input
                           type="text"
                           value={newReqKey}
@@ -1091,7 +1091,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex gap-3 items-end">
                       <div className="flex-grow flex flex-col gap-1">
-                        <label className="text-[9px] text-neutral-500 font-mono">EDITING NAME FOR KEY: "{editingReqKey}"</label>
+                        <label className="text-[9px] text-neutral-500 font-mono">EDITING NAME FOR KEY: &quot;{editingReqKey}&quot;</label>
                         <input
                           type="text"
                           value={editingReqName}

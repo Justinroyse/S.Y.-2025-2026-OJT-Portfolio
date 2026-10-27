@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { readData } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-
 interface ContactItem {
   label: string;
   value: string;

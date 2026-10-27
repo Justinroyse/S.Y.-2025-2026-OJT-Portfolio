@@ -54,14 +54,17 @@ export async function GET() {
   }
 
   try {
-    const about = await readData<AboutData>("about.json");
-    const logs = await readData<LogEntry[]>("logs.json");
-    const requirements = await readData<RequirementItem[]>("requirements.json");
-    const hte = await readData<HTEData>("hte.json");
+    const [about, logs, requirements, hte] = await Promise.all([
+      readData<AboutData>("about.json"),
+      readData<LogEntry[]>("logs.json"),
+      readData<RequirementItem[]>("requirements.json"),
+      readData<HTEData>("hte.json"),
+    ]);
     return NextResponse.json({ about, logs, requirements, hte });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : "Failed to load databases";
     console.error(error);
-    return NextResponse.json({ error: error?.message || "Failed to load databases" }, { status: 500 });
+    return NextResponse.json({ error: errMessage }, { status: 500 });
   }
 }
 
@@ -135,8 +138,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : "Operation failed";
     console.error(error);
-    return NextResponse.json({ error: error?.message || "Operation failed" }, { status: 500 });
+    return NextResponse.json({ error: errMessage }, { status: 500 });
   }
 }

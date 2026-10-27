@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import fs from "fs/promises";
 import path from "path";
 import { readData, writeData } from "@/lib/db";
-import { supabase } from "@/lib/supabase";
+import { commitFileToGitHub, deleteFileFromGitHub, isGitHubConfigured } from "@/lib/github";
 
 async function isAuthenticated() {
   const cookieStore = await cookies();
@@ -18,29 +18,57 @@ interface RequirementItem {
   submissionDate?: string;
 }
 
-// Reusable helper to delete file from storage (Supabase or local FS)
-async function deleteFileFromStorage(currentUrl: string) {
+interface HTEData {
+  name: string;
+  designation: string;
+  details: string;
+  logoUrl: string;
+}
+
+/**
+ * Helper to delete a file from GitHub repository and local disk.
+ */
+async function deleteFileFromStorage(currentUrl: string, key?: string) {
   if (!currentUrl || currentUrl === "#") return;
 
-  if (supabase && currentUrl.includes("supabase.co/storage")) {
-    const filename = currentUrl.split("/").pop();
-    if (filename) {
-      const { error: deleteError } = await supabase.storage
-        .from("uploads")
-        .remove([filename]);
-      
-      if (deleteError) {
-        console.warn("Failed to delete file from Supabase storage:", deleteError);
-      }
-    }
-  } else {
-    // Resolve local path
-    const filePath = path.join(process.cwd(), "public", currentUrl);
+  let relativePath = "";
+  if (currentUrl.startsWith("http")) {
     try {
-      await fs.unlink(filePath);
+      const parsed = new URL(currentUrl);
+      const match = parsed.pathname.match(/public\/uploads\/.+$/);
+      if (match) {
+        relativePath = match[0];
+      } else {
+        const filename = parsed.pathname.split("/").pop();
+        if (filename) relativePath = `public/uploads/${filename}`;
+      }
     } catch {
-      console.warn("File was already deleted or not found: ", filePath);
+      if (key) relativePath = `public/uploads/${key}.pdf`;
     }
+  } else if (currentUrl.startsWith("/uploads/")) {
+    relativePath = `public${currentUrl}`;
+  }
+
+  if (relativePath && isGitHubConfigured()) {
+    try {
+      await deleteFileFromGitHub({
+        path: relativePath,
+        message: `chore(upload): delete ${relativePath.split("/").pop()}`,
+      });
+    } catch (e) {
+      console.warn("Failed to delete from GitHub:", e);
+    }
+  }
+
+  // Also remove from local filesystem if present
+  try {
+    const filename = relativePath ? path.basename(relativePath) : currentUrl.split("/").pop();
+    if (filename) {
+      const localPath = path.join(process.cwd(), "public", "uploads", filename);
+      await fs.unlink(localPath);
+    }
+  } catch {
+    // Ignore if not present locally
   }
 }
 
@@ -73,44 +101,37 @@ export async function POST(req: NextRequest) {
 
     // Convert file to Buffer
     const buffer = Buffer.from(await file.arrayBuffer());
+    const ext = path.extname(file.name) || (isRequirement ? ".pdf" : ".png");
+    const filename = `${reqKey}${ext}`;
+    const repoPath = `public/uploads/${filename}`;
     let fileUrl = "";
 
-    if (supabase) {
-      const ext = path.extname(file.name) || ".pdf";
-      const filename = `${reqKey}${ext}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("uploads")
-        .upload(filename, buffer, {
-          contentType: file.type || "application/octet-stream",
-          upsert: true,
-        });
-
-      if (uploadError) {
-        console.error("Supabase Storage upload error:", uploadError);
-        return NextResponse.json({ error: `Storage upload failed: ${uploadError.message}` }, { status: 500 });
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("uploads")
-        .getPublicUrl(filename);
-
-      fileUrl = publicUrl;
+    // 1. Commit to GitHub repository if configured
+    if (isGitHubConfigured()) {
+      const commitRes = await commitFileToGitHub({
+        path: repoPath,
+        content: buffer,
+        message: `feat(upload): upload ${filename}`,
+      });
+      // Raw CDN URL allows instant browser viewing before Vercel completes static build
+      fileUrl = commitRes.rawUrl;
     } else {
-      // Local fallback
-      const uploadDir = path.join(process.cwd(), "public", "uploads");
-      await fs.mkdir(uploadDir, { recursive: true });
-
-      const ext = path.extname(file.name) || ".pdf";
-      const filename = `${reqKey}${ext}`;
-      const filePath = path.join(uploadDir, filename);
-
-      await fs.writeFile(filePath, buffer);
       fileUrl = `/uploads/${filename}`;
     }
 
+    // 2. Also write to local filesystem for instant dev access
+    try {
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      await fs.mkdir(uploadDir, { recursive: true });
+      await fs.writeFile(path.join(uploadDir, filename), buffer);
+    } catch (fsErr) {
+      // Expected error on read-only environments like Vercel
+      if (!isGitHubConfigured()) {
+        throw fsErr;
+      }
+    }
+
     if (isRequirement) {
-      // Update requirements db
       const today = new Date().toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
@@ -124,12 +145,18 @@ export async function POST(req: NextRequest) {
       };
 
       await writeData("requirements.json", requirements);
+    } else {
+      // HTE Logo update
+      const hte = await readData<HTEData>("hte.json");
+      hte.logoUrl = fileUrl;
+      await writeData("hte.json", hte);
     }
 
     return NextResponse.json({ success: true, url: fileUrl });
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ error: error?.message || "Upload processing failed" }, { status: 500 });
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : "Upload processing failed";
+    console.error("Upload error:", error);
+    return NextResponse.json({ error: errMessage }, { status: 500 });
   }
 }
 
@@ -156,9 +183,9 @@ export async function DELETE(req: NextRequest) {
       }
 
       const currentUrl = requirements[idx].href;
-      await deleteFileFromStorage(currentUrl);
+      await deleteFileFromStorage(currentUrl, key);
 
-      // Reset database item
+      // Reset requirement item in metadata
       requirements[idx] = {
         ...requirements[idx],
         href: "#",
@@ -167,15 +194,19 @@ export async function DELETE(req: NextRequest) {
 
       await writeData("requirements.json", requirements);
     } else {
-      // General file delete (e.g. HTE logo)
+      // HTE logo deletion
       if (url) {
-        await deleteFileFromStorage(url);
+        await deleteFileFromStorage(url, key);
       }
+      const hte = await readData<HTEData>("hte.json");
+      hte.logoUrl = "";
+      await writeData("hte.json", hte);
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ error: error?.message || "File deletion failed" }, { status: 500 });
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : "File deletion failed";
+    console.error("Delete error:", error);
+    return NextResponse.json({ error: errMessage }, { status: 500 });
   }
 }

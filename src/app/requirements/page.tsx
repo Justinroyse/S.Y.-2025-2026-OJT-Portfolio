@@ -1,8 +1,6 @@
 import { readData } from "@/lib/db";
 import RequirementsList from "@/components/ui/RequirementsList";
 
-export const dynamic = "force-dynamic";
-
 interface RequirementItem {
   key: string;
   name: string;

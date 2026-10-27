@@ -1,8 +1,6 @@
 import { readData } from "@/lib/db";
 import CrossedBox from "@/components/ui/CrossedBox";
 
-export const dynamic = "force-dynamic";
-
 interface AboutData {
   name: string;
   course: string;
@@ -20,9 +18,11 @@ interface HTEData {
 }
 
 export default async function Home() {
-  const aboutData = await readData<AboutData>("about.json");
-  const logs = await readData<LogEntry[]>("logs.json");
-  const hteData = await readData<HTEData>("hte.json");
+  const [aboutData, logs, hteData] = await Promise.all([
+    readData<AboutData>("about.json"),
+    readData<LogEntry[]>("logs.json"),
+    readData<HTEData>("hte.json"),
+  ]);
 
   // Sum up hours from the log entries dynamically
   let totalHours = 0;
