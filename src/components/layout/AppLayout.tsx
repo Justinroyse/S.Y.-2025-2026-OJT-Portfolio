@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import DropdownSelector from "../ui/DropdownSelector";
 import NavBar from "../ui/NavBar";
 
 export interface ProfileSummary {
@@ -60,11 +59,11 @@ export default function AppLayout({
           00
         </div>
 
-        {/* ROW 1, CELL 2: Quick Section Selector / Dossier Switcher */}
-        <div className="border-b lg:border-r border-white/15 bg-[#1b1c1e]/85 lg:bg-[#252525]/60 backdrop-blur-md px-4 py-2.5 sm:px-6 lg:px-6 flex items-center justify-between lg:justify-center gap-3">
-          {/* Mobile/Tablet Identity Header with Profile Thumbnail */}
-          <div className="flex items-center gap-3 lg:hidden min-w-0">
-            <div className="w-10 h-10 border border-white/25 bg-[#121314] flex items-center justify-center overflow-hidden shrink-0">
+        {/* ROW 1, CELL 2: Dossier Header Block (Desktop) / Identity Header (Mobile) */}
+        <div className="border-b lg:border-r border-white/15 bg-[#1b1c1e]/85 lg:bg-[#252525]/60 backdrop-blur-md px-4 py-3 sm:px-6 lg:px-6 flex items-center justify-center">
+          {/* Mobile/Tablet Identity Header with Centered Profile Thumbnail */}
+          <div className="flex flex-col items-center text-center gap-2 lg:hidden min-w-0">
+            <div className="w-16 h-16 border border-white/25 bg-[#121314] flex items-center justify-center overflow-hidden shrink-0">
               {profile.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -73,21 +72,33 @@ export default function AppLayout({
                   className="w-full h-full object-cover select-none"
                 />
               ) : (
-                <span className="text-[11px] font-orbitron font-bold text-neutral-400">
+                <span className="text-[13px] font-orbitron font-bold text-neutral-400">
                   {initials || "JS"}
                 </span>
               )}
             </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[12px] sm:text-[13px] font-orbitron font-bold tracking-wider text-white uppercase truncate">
+            <div className="flex flex-col items-center min-w-0">
+              <span className="text-[10px] font-mono text-neutral-400 tracking-[0.16em] uppercase">
+                COMPUTER ENGINEERING STUDENT
+              </span>
+              <span className="text-[13px] sm:text-[14px] font-orbitron font-bold tracking-wider text-white uppercase truncate mt-0.5">
                 {profile.name}
               </span>
-              <span className="text-[10px] font-mono text-neutral-400 tracking-wider truncate">
+              <span className="text-[10px] font-mono text-neutral-400 tracking-wider truncate mt-0.5">
                 {profile.course} • {profile.studentId}
               </span>
             </div>
           </div>
-          <DropdownSelector />
+
+          {/* Desktop Academic Term Identifier */}
+          <div className="hidden lg:flex flex-col items-center text-center gap-0.5 select-none">
+            <span className="text-[11px] font-orbitron font-bold tracking-[0.2em] text-white uppercase">
+              OJT 1 PORTFOLIO
+            </span>
+            <span className="text-[10px] font-mono text-neutral-400 tracking-[0.18em] uppercase">
+              S.Y. 2025 – 2026
+            </span>
+          </div>
         </div>
 
         {/* ROW 1, CELL 3: Primary Navigation Header (Sticky on Mobile/Tablet) */}
@@ -111,10 +122,10 @@ export default function AppLayout({
         <aside className="border-b lg:border-r border-white/15 bg-[#1b1c1e]/35 lg:bg-[#252525]/35 px-4 py-3.5 sm:px-8 sm:py-4 lg:p-8 xl:p-10 flex flex-col justify-between">
           {/* Desktop Full Title Block + Sticky Anchor */}
           <div className="lg:sticky lg:top-8 flex flex-col gap-6">
-            {/* Desktop Identity Header + Framed Profile Portrait */}
-            <div className="hidden lg:flex flex-col gap-4">
-              {/* Profile Portrait Frame */}
-              <div className="relative w-24 h-24 xl:w-28 xl:h-28 border border-white/30 bg-[#1b1c1e] flex items-center justify-center overflow-hidden select-none">
+            {/* Desktop Identity Header + Centered Framed Profile Portrait */}
+            <div className="hidden lg:flex flex-col items-center text-center gap-4">
+              {/* Centered Profile Portrait Frame */}
+              <div className="relative w-32 h-32 xl:w-36 xl:h-36 mx-auto border border-white/30 bg-[#1b1c1e] flex items-center justify-center overflow-hidden select-none">
                 <span className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white/70 pointer-events-none z-10" />
                 <span className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white/70 pointer-events-none z-10" />
                 <span className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white/70 pointer-events-none z-10" />
@@ -129,7 +140,7 @@ export default function AppLayout({
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center text-center p-2">
-                    <span className="text-[18px] font-orbitron font-bold text-white/80 tracking-widest">
+                    <span className="text-[20px] font-orbitron font-bold text-white/80 tracking-widest">
                       {initials || "JS"}
                     </span>
                     <span className="text-[8px] font-mono text-neutral-500 tracking-widest uppercase mt-0.5">
@@ -139,14 +150,14 @@ export default function AppLayout({
                 )}
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col items-center gap-1.5">
                 <span className="text-[10px] font-mono text-neutral-400 tracking-[0.16em] uppercase">
                   COMPUTER ENGINEERING STUDENT
                 </span>
-                <h1 className="text-[20px] xl:text-[22px] font-orbitron font-bold leading-snug text-white tracking-wider uppercase">
+                <h1 className="text-[19px] xl:text-[21px] font-orbitron font-bold leading-snug text-white tracking-wider uppercase">
                   {profile.name}
                 </h1>
-                <div className="flex flex-wrap items-center gap-2 pt-1">
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                   <span className="px-2 py-0.5 bg-white/8 border border-white/15 text-[11px] font-orbitron font-semibold text-neutral-200 tracking-widest uppercase">
                     {profile.course}
                   </span>
@@ -215,7 +226,7 @@ export default function AppLayout({
           </div>
 
           {/* Desktop Academic Meta Stamp */}
-          <div className="hidden lg:flex flex-col gap-1 pt-8 text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
+          <div className="hidden lg:flex flex-col items-center text-center gap-1 pt-8 text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
             <span>Polytechnic University of the Philippines</span>
             <span className="text-neutral-600">College of Engineering • CpE</span>
           </div>
